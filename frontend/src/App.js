@@ -18,11 +18,13 @@ const App = () => {
     if (token) {
       localStorage.setItem('token', token);
       setIsAuthenticated(true);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`; // Set auth header globally
       window.history.replaceState({}, document.title, window.location.pathname); 
     } else {
       const storedToken = localStorage.getItem('token');
       if (storedToken) {
         setIsAuthenticated(true);
+        axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
       }
     }
   }, []);
@@ -43,6 +45,7 @@ const App = () => {
   const handleLogout = () => {
     setIsAuthenticated(false);
     localStorage.removeItem('token');
+    axios.defaults.headers.common['Authorization'] = ''; // Remove the auth header
   };
 
   return (
