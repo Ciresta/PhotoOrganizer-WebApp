@@ -33,6 +33,11 @@ app.get('/photos', refreshTokenMiddleware, (req, res) => {
   uploadController.getGooglePhotos(req, res, oauth2Client);
 });
 
+app.get('/user/profile', refreshTokenMiddleware, (req, res) => {
+  uploadController.getUserProfile(req, res, oauth2Client);
+});
+
+
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
 });

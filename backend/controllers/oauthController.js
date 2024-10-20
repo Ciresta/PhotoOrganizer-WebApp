@@ -14,8 +14,10 @@ const oauth2Client = new OAuth2(
 );
 
 const scopes = [
-  'https://www.googleapis.com/auth/photoslibrary.readonly',
-  'https://www.googleapis.com/auth/photoslibrary.appendonly',
+  'https://www.googleapis.com/auth/photoslibrary.readonly', // Existing scope for reading photos
+  'https://www.googleapis.com/auth/photoslibrary.appendonly', // Existing scope for appending photos
+  'https://www.googleapis.com/auth/userinfo.profile', // New scope for user profile information
+  'https://www.googleapis.com/auth/userinfo.email', 
 ];
 
 exports.getAuthUrl = (req, res) => {
@@ -32,6 +34,7 @@ exports.handleAuthCallback = async (req, res) => {
   try {
     const { tokens } = await oauth2Client.getToken(code);
     oauth2Client.setCredentials(tokens);
+    console.log('Tokens:', tokens);
     res.redirect(`http://localhost:3000?token=${tokens.access_token}`);
   } catch (error) {
     console.error('Error during OAuth callback:', error);

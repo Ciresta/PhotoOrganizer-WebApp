@@ -1,4 +1,3 @@
-// src/components/Navbar.js
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom'; // Import Link from react-router-dom
 import homeIcon from '../assets/images/home.svg';
@@ -6,10 +5,10 @@ import uploadIcon from '../assets/images/upload.svg';
 import slideshowIcon from '../assets/images/slideshow.svg';
 import signinIcon from '../assets/images/signuser.svg';
 import searchIcon from '../assets/images/search.svg';
-import userProfileIcon from '../assets/images/userprofileimg.svg';
 import filterIcon from '../assets/images/filter.svg'; 
+import userProfileIcon from '../assets/images/signuser.svg'; // Use a different default profile image
 
-const Navbar = ({ isAuthenticated, onLogout }) => {
+const Navbar = ({ isAuthenticated, onLogout, user }) => {
   const [dropdownVisible, setDropdownVisible] = useState(false);
 
   const toggleDropdown = () => {
@@ -60,15 +59,18 @@ const Navbar = ({ isAuthenticated, onLogout }) => {
         {isAuthenticated ? (
           <div className="relative flex items-center space-x-1">
             <img
-              src={userProfileIcon}
+              src={user?.profilePic || userProfileIcon} // Use user's profile image or fallback
               alt="User Profile"
               className="w-7 h-7 rounded-full cursor-pointer"
               onClick={toggleDropdown} // Toggle dropdown on click
             />
             {dropdownVisible && (
-              <div className="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-lg z-10">
-                <ul className="py-2">
-                  <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer">Profile</li>
+              <div className="absolute right-0 mt-60 w-48 bg-white shadow-lg rounded-lg z-10">
+                <ul className="py-2 ml-4">
+            <span className="text-gray-700 text-base ">Hello,<br/> <span className='font-bold'>{user?.name || 'Guest'}</span></span> {/* Use optional chaining */}
+                  <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer">
+                    <Link to="/profile">Profile</Link> {/* Redirect to /profile */}
+                  </li>
                   <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer">Settings</li>
                   <li
                     className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
@@ -79,6 +81,7 @@ const Navbar = ({ isAuthenticated, onLogout }) => {
                 </ul>
               </div>
             )}
+            {/* Greeting user with their name */}
           </div>
         ) : (
           <a href="#" className="flex items-center space-x-1 text-gray-700 text-base">

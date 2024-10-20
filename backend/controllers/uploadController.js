@@ -90,3 +90,39 @@ exports.getGooglePhotos = async (req, res, oauth2Client) => {
     res.status(500).send('Error fetching photos from Google Photos');
   }
 };
+
+exports.getUserProfile = async (req, res, oauth2Client) => {
+  if (!oauth2Client.credentials.access_token) {
+    return res.status(401).send('Unauthorized: No access token provided');
+  }
+
+  // Log the access token for debugging
+  console.log('Access Token:', oauth2Client.credentials.access_token);
+
+  try {
+    const peopleUrl = 'https://people.googleapis.com/v1/people/me?personFields=names,emailAddresses,birthdays,photos';
+    const headers = {
+      Authorization: `Bearer ${oauth2Client.credentials.access_token}`,
+    };
+
+    // Fetch the user's profile from Google People API
+    const response = await axios.get(peopleUrl, { headers });
+    const profileData = response.data;
+
+    // Log the response from Google People API
+    console.log('Google People API Response:', profileData);
+
+    // Parse the profile data
+    const user = {
+      name: profileData.names && profileData.names.length > 0 ? profileData.names[0].displayName : 'N/A',
+      email: profileData.emailAddresses && profileData.emailAddresses.length > 0 ? profileData.emailAddresses[0].value : 'N/A',
+      birthday: profileData.birthdays && profileData.birthdays.length > 0 ? profileData.birthdays[0].date : null,
+      profilePic: profileData.photos && profileData.photos.length > 0 ? profileData.photos[0].url : null,
+    };    
+
+    res.status(200).json(user);
+  } catch (error) {
+    console.error('Error fetching user profile:', error.response ? error.response.data : error.message);
+    res.status(500).send('Error fetching user profile');
+  }
+};
