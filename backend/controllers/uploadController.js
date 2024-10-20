@@ -62,23 +62,53 @@ exports.uploadPhotos = async (req, res, oauth2Client) => {
   }
 };
 
-// Function to get photos from Google Photos
 exports.getGooglePhotos = async (req, res, oauth2Client) => {
   if (!oauth2Client.credentials.access_token) {
     return res.status(401).send('Unauthorized: No access token provided');
   }
 
+  const { fromDate, toDate } = req.query; // Get date range from query parameters
+
   try {
-    const photosUrl = 'https://photoslibrary.googleapis.com/v1/mediaItems';
+    const photosUrl = 'https://photoslibrary.googleapis.com/v1/mediaItems:search';
     const headers = {
       Authorization: `Bearer ${oauth2Client.credentials.access_token}`,
     };
 
-    // Retrieve the list of photos
-    const response = await axios.get(photosUrl, { headers });
+    let filters = {};
+
+    // If both fromDate and toDate are provided, apply the date filter
+    if (fromDate && toDate) {
+      filters = {
+        dateFilter: {
+          ranges: [
+            {
+              startDate: {
+                year: parseInt(fromDate.split('-')[0]),
+                month: parseInt(fromDate.split('-')[1]),
+                day: parseInt(fromDate.split('-')[2]),
+              },
+              endDate: {
+                year: parseInt(toDate.split('-')[0]),
+                month: parseInt(toDate.split('-')[1]),
+                day: parseInt(toDate.split('-')[2]),
+              },
+            },
+          ],
+        },
+      };
+    }
+
+    // Make a POST request to Google Photos API
+    const response = await axios.post(
+      photosUrl,
+      { filters }, // Use filters only if date range is provided
+      { headers }
+    );
+
     const photos = response.data.mediaItems || [];
 
-    // Send the photo URLs to the frontend
+    // Send the filtered or all photo URLs to the frontend
     const photoUrls = photos.map((photo) => ({
       url: photo.baseUrl,
       filename: photo.filename,
