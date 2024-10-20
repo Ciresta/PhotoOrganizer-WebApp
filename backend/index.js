@@ -23,9 +23,9 @@ const oauth2Client = oauthController.oauth2Client;
 app.get('/auth/google', oauthController.getAuthUrl);
 app.get('/auth/google/callback', oauthController.handleAuthCallback);
 
-// Photo upload route
-app.post('/add', upload.single('photo'), refreshTokenMiddleware, (req, res) => {
-  uploadController.uploadPhoto(req, res, oauth2Client);
+// Photo upload route - handle multiple file uploads
+app.post('/add', upload.array('photos', 10), refreshTokenMiddleware, (req, res) => {
+  uploadController.uploadPhotos(req, res, oauth2Client); // Adjusted to handle multiple photos
 });
 
 // Route to get all photos from Google Photos

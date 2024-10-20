@@ -2,9 +2,14 @@ const { google } = require('googleapis');
 
 // OAuth2 setup
 const OAuth2 = google.auth.OAuth2;
+// const oauth2Client = new OAuth2(
+//   '646967527297-tvdm72odo8bgbumqqje509e5vqaj99u3.apps.googleusercontent.com',
+//   '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',
+//   'http://localhost:5000/auth/google/callback'
+// );
 const oauth2Client = new OAuth2(
-  '646967527297-tvdm72odo8bgbumqqje509e5vqaj99u3.apps.googleusercontent.com',
-  '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',
+  '747537593916-thhvuqj5d5i9bm9c8g7d7247c0m2skgs.apps.googleusercontent.com',
+  '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',
   'http://localhost:5000/auth/google/callback'
 );
 

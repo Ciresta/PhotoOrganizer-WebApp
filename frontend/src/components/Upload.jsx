@@ -1,18 +1,18 @@
 import React, { useState, useCallback } from 'react';
 import axios from 'axios';
+import { FaFolderOpen, FaTrashAlt } from 'react-icons/fa'; // Importing icons
 
 const Upload = () => {
-  const [file, setFile] = useState(null);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [errorMessage, setErrorMessage] = useState(null);
   const [successPopupVisible, setSuccessPopupVisible] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [isDragOver, setIsDragOver] = useState(false); // New state to track drag over
+  const [isDragOver, setIsDragOver] = useState(false); // State to track drag over
 
   const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    if (selectedFile) {
-      addFileToUploaded(selectedFile);
+    const selectedFiles = Array.from(e.target.files); // Allow multiple files
+    if (selectedFiles.length > 0) {
+      addFilesToUploaded(selectedFiles);
     }
   };
 
@@ -20,9 +20,9 @@ const Upload = () => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false); // Reset drag over state
-    const files = e.dataTransfer.files;
+    const files = Array.from(e.dataTransfer.files); // Allow multiple files
     if (files.length > 0) {
-      addFileToUploaded(files[0]);
+      addFilesToUploaded(files);
     }
   }, []);
 
@@ -36,27 +36,29 @@ const Upload = () => {
     setIsDragOver(false); // Reset drag over state when drag leaves
   };
 
-  const addFileToUploaded = (selectedFile) => {
-    const newFile = {
-      name: selectedFile.name,
-      size: selectedFile.size,
-      type: selectedFile.type,
-    };
-    setUploadedFiles([...uploadedFiles, newFile]);
-    setFile(selectedFile);
+  const addFilesToUploaded = (selectedFiles) => {
+    const newFiles = selectedFiles.map((file) => ({
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      file: file, // Store the actual file object for uploading
+    }));
+    setUploadedFiles((prev) => [...prev, ...newFiles]); // Add new files to uploadedFiles
     setErrorMessage(null);
   };
 
   const handleUpload = async () => {
-    if (!file) {
-      setErrorMessage("Please select a file before uploading.");
+    if (uploadedFiles.length === 0) {
+      setErrorMessage("Please select files before uploading.");
       return;
     }
 
     setLoading(true);
     try {
       const formData = new FormData();
-      formData.append('photo', file);
+      uploadedFiles.forEach((fileObj) => {
+        formData.append('photos', fileObj.file); // Append each file object to FormData
+      });
 
       const response = await axios.post('http://localhost:5000/add', formData, {
         headers: {
@@ -64,47 +66,44 @@ const Upload = () => {
         },
       });
 
-      const uploadedFile = {
-        url: response.data.url,
-        name: response.data.filename,
-        size: file.size,
-        type: file.type,
-        uploadDate: new Date().toISOString(),
-      };
-
-      setUploadedFiles((prev) => prev.map((f) => f.name === uploadedFile.name ? uploadedFile : f));
-      setFile(null);
       setSuccessPopupVisible(true);
 
       setTimeout(() => {
         setSuccessPopupVisible(false);
-        window.location.href = "/home";
+        window.location.href = "/home"; // Redirect after upload
       }, 2000);
       
     } catch (error) {
-      console.error("Error uploading file:", error);
-      setErrorMessage("Error uploading file. Please try again.");
+      console.error("Error uploading files:", error);
+      setErrorMessage("Error uploading files. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
+  // Function to remove a file from the uploaded files
   const handleRemoveFile = (index) => {
-    setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
+    setUploadedFiles(uploadedFiles.filter((_, i) => i !== index)); // Remove file from uploadedFiles
   };
 
   return (
     <div className="w-full h-screen flex justify-center items-start space-x-8 p-10" 
          onDragOver={handleDragOver} 
          onDrop={handleDrop}
-         onDragLeave={handleDragLeave}> {/* Handle drag leave */}
+         onDragLeave={handleDragLeave}>
       <div className="w-1/2">
         <div className={`border-4 border-dashed rounded-lg p-12 flex flex-col items-center justify-center h-[600px] ${isDragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-400 bg-[#f2f3f8]'}`}>
           <div className="mb-6">
-            <i className="fas fa-folder-open text-yellow-500 text-8xl"></i>
+            <FaFolderOpen className="text-yellow-500 text-8xl" />
           </div>
-          <p className="text-gray-600 text-lg mb-3">Upload files here</p>
-          <input type="file" onChange={handleFileChange} className="mb-4" />
+          <p className="text-gray-600 text-lg mb-3">Drag and Drop Images here</p>
+          or
+          <input 
+            type="file" 
+            onChange={handleFileChange} 
+            className="mb-4" 
+            multiple // Allow multiple file selection
+          />
           {errorMessage && <p className="text-red-500 mt-4">{errorMessage}</p>}
         </div>
       </div>
@@ -116,7 +115,7 @@ const Upload = () => {
               <th className="py-3">Name</th>
               <th className="py-3">Size</th>
               <th className="py-3">Type</th>
-              <th className="py-3">Delete</th>
+              <th className="py-3">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -132,8 +131,9 @@ const Upload = () => {
                     <button 
                       onClick={() => handleRemoveFile(index)} 
                       className="text-red-500 text-lg"
+                      title="Delete File"
                     >
-                      <i className="fas fa-trash-alt"></i>
+                      <FaTrashAlt className="text-black" />
                     </button>
                   </td>
                 </tr>
@@ -156,7 +156,7 @@ const Upload = () => {
               <span className="animate-pulse">...</span>
             </span>
           ) : (
-            "Upload File"
+            "Upload Files"
           )}
         </button>
       </div>

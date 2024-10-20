@@ -1,45 +1,64 @@
 const axios = require('axios');
 const fs = require('fs');
-const path = require('path');
 
-// Function to upload photo to Google Photos
-exports.uploadPhoto = async (req, res, oauth2Client) => {
-  const filePath = req.file.path;
+// Function to upload multiple photos to Google Photos
+exports.uploadPhotos = async (req, res, oauth2Client) => {
+  const files = req.files; // Access the array of uploaded files
 
   if (!oauth2Client.credentials.access_token) {
     return res.status(401).send('Unauthorized: No access token provided');
   }
 
   try {
-    const uploadUrl = 'https://photoslibrary.googleapis.com/v1/uploads';
-    const headers = {
-      Authorization: `Bearer ${oauth2Client.credentials.access_token}`,
-      'Content-Type': 'application/octet-stream',
-      'X-Goog-Upload-Protocol': 'raw',
-    };
+    const uploadResults = [];
 
-    const fileData = fs.readFileSync(filePath);
-    const uploadToken = await axios.post(uploadUrl, fileData, { headers });
+    // Loop through each uploaded file and upload it to Google Photos
+    for (let file of files) {
+      const filePath = file.path;
 
-    const createMediaItemUrl = 'https://photoslibrary.googleapis.com/v1/mediaItems:batchCreate';
-    const mediaItemRequest = {
-      newMediaItems: [
-        {
-          description: 'Uploaded via PhotoTaggerApp',
-          simpleMediaItem: {
-            uploadToken: uploadToken.data,
+      // Step 1: Upload the file to Google Photos and get the upload token
+      const uploadUrl = 'https://photoslibrary.googleapis.com/v1/uploads';
+      const headers = {
+        Authorization: `Bearer ${oauth2Client.credentials.access_token}`,
+        'Content-Type': 'application/octet-stream',
+        'X-Goog-Upload-Protocol': 'raw',
+      };
+
+      const fileData = fs.readFileSync(filePath);
+      const uploadResponse = await axios.post(uploadUrl, fileData, { headers });
+
+      const uploadToken = uploadResponse.data;
+
+      // Step 2: Create a media item using the upload token
+      const createMediaItemUrl = 'https://photoslibrary.googleapis.com/v1/mediaItems:batchCreate';
+      const mediaItemRequest = {
+        newMediaItems: [
+          {
+            description: 'Uploaded via PhotoTaggerApp',
+            simpleMediaItem: {
+              uploadToken: uploadToken,
+            },
           },
-        },
-      ],
-    };
+        ],
+      };
 
-    await axios.post(createMediaItemUrl, mediaItemRequest, { headers });
-    res.send('Photo uploaded successfully to Google Photos!');
+      await axios.post(createMediaItemUrl, mediaItemRequest, { headers });
+
+      // Step 3: Store the result (filename and status) in an array to send back
+      uploadResults.push({
+        filename: file.originalname,
+        status: 'Uploaded successfully',
+      });
+
+      // Step 4: Clean up by deleting the uploaded file from the server
+      fs.unlinkSync(filePath);
+    }
+
+    // Step 5: Send the result of all uploads back to the client
+    res.status(200).json({ message: 'Photos uploaded successfully', results: uploadResults });
   } catch (error) {
-    console.error('Error uploading photo:', error);
-    res.status(500).send('Error uploading photo');
-  } finally {
-    fs.unlinkSync(filePath);
+    console.error('Error uploading photos:', error);
+    res.status(500).send('Error uploading photos');
   }
 };
 
