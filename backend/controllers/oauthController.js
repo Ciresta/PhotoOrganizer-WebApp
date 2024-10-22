@@ -7,11 +7,18 @@ const OAuth2 = google.auth.OAuth2;
 //   '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',
 //   'http://localhost:5000/auth/google/callback'
 // );
+
 const oauth2Client = new OAuth2(
   '747537593916-thhvuqj5d5i9bm9c8g7d7247c0m2skgs.apps.googleusercontent.com',
   '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',
   'http://localhost:5000/auth/google/callback'
 );
+
+// const oauth2Client = new OAuth2(
+//   '747537593916-4ok97eltenm5kn4a5i7q0nnld4vo6pdl.apps.googleusercontent.com',
+//   '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',
+//   'http://localhost:5000/auth/google/callback'
+// );
 
 const scopes = [
   'https://www.googleapis.com/auth/photoslibrary.readonly', // Existing scope for reading photos

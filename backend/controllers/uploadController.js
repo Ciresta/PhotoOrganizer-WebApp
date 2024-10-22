@@ -1,9 +1,8 @@
 const axios = require('axios');
 const fs = require('fs');
 
-// Function to upload multiple photos to Google Photos
 exports.uploadPhotos = async (req, res, oauth2Client) => {
-  const files = req.files; // Access the array of uploaded files
+  const files = req.files;
 
   if (!oauth2Client.credentials.access_token) {
     return res.status(401).send('Unauthorized: No access token provided');
@@ -12,11 +11,9 @@ exports.uploadPhotos = async (req, res, oauth2Client) => {
   try {
     const uploadResults = [];
 
-    // Loop through each uploaded file and upload it to Google Photos
     for (let file of files) {
       const filePath = file.path;
 
-      // Step 1: Upload the file to Google Photos and get the upload token
       const uploadUrl = 'https://photoslibrary.googleapis.com/v1/uploads';
       const headers = {
         Authorization: `Bearer ${oauth2Client.credentials.access_token}`,
@@ -29,7 +26,6 @@ exports.uploadPhotos = async (req, res, oauth2Client) => {
 
       const uploadToken = uploadResponse.data;
 
-      // Step 2: Create a media item using the upload token
       const createMediaItemUrl = 'https://photoslibrary.googleapis.com/v1/mediaItems:batchCreate';
       const mediaItemRequest = {
         newMediaItems: [
@@ -44,17 +40,14 @@ exports.uploadPhotos = async (req, res, oauth2Client) => {
 
       await axios.post(createMediaItemUrl, mediaItemRequest, { headers });
 
-      // Step 3: Store the result (filename and status) in an array to send back
       uploadResults.push({
         filename: file.originalname,
         status: 'Uploaded successfully',
       });
 
-      // Step 4: Clean up by deleting the uploaded file from the server
       fs.unlinkSync(filePath);
     }
 
-    // Step 5: Send the result of all uploads back to the client
     res.status(200).json({ message: 'Photos uploaded successfully', results: uploadResults });
   } catch (error) {
     console.error('Error uploading photos:', error);
@@ -67,7 +60,7 @@ exports.getGooglePhotos = async (req, res, oauth2Client) => {
     return res.status(401).send('Unauthorized: No access token provided');
   }
 
-  const { fromDate, toDate } = req.query; // Get date range from query parameters
+  const { fromDate, toDate, location } = req.query;
 
   try {
     const photosUrl = 'https://photoslibrary.googleapis.com/v1/mediaItems:search';
@@ -77,44 +70,46 @@ exports.getGooglePhotos = async (req, res, oauth2Client) => {
 
     let filters = {};
 
-    // If both fromDate and toDate are provided, apply the date filter
     if (fromDate && toDate) {
-      filters = {
-        dateFilter: {
-          ranges: [
-            {
-              startDate: {
-                year: parseInt(fromDate.split('-')[0]),
-                month: parseInt(fromDate.split('-')[1]),
-                day: parseInt(fromDate.split('-')[2]),
-              },
-              endDate: {
-                year: parseInt(toDate.split('-')[0]),
-                month: parseInt(toDate.split('-')[1]),
-                day: parseInt(toDate.split('-')[2]),
-              },
+      filters.dateFilter = {
+        ranges: [
+          {
+            startDate: {
+              year: parseInt(fromDate.split('-')[0]),
+              month: parseInt(fromDate.split('-')[1]),
+              day: parseInt(fromDate.split('-')[2]),
             },
-          ],
-        },
+            endDate: {
+              year: parseInt(toDate.split('-')[0]),
+              month: parseInt(toDate.split('-')[1]),
+              day: parseInt(toDate.split('-')[2]),
+            },
+          },
+        ],
       };
     }
 
-    // Make a POST request to Google Photos API
     const response = await axios.post(
       photosUrl,
-      { filters }, // Use filters only if date range is provided
+      { filters },
       { headers }
     );
 
     const photos = response.data.mediaItems || [];
 
-    // Send the filtered or all photo URLs to the frontend
-    const photoUrls = photos.map((photo) => ({
+    const filteredPhotos = location
+      ? photos.filter(photo => {
+          return photo.location && photo.location.includes(location);
+        })
+      : photos;
+
+    const photoDetails = filteredPhotos.map((photo) => ({
       url: photo.baseUrl,
       filename: photo.filename,
+      creationTime: photo.mediaMetadata.creationTime || null, 
     }));
 
-    res.status(200).json(photoUrls);
+    res.status(200).json(photoDetails);
   } catch (error) {
     console.error('Error fetching Google Photos:', error);
     res.status(500).send('Error fetching photos from Google Photos');
@@ -126,7 +121,6 @@ exports.getUserProfile = async (req, res, oauth2Client) => {
     return res.status(401).send('Unauthorized: No access token provided');
   }
 
-  // Log the access token for debugging
   console.log('Access Token:', oauth2Client.credentials.access_token);
 
   try {
@@ -135,14 +129,11 @@ exports.getUserProfile = async (req, res, oauth2Client) => {
       Authorization: `Bearer ${oauth2Client.credentials.access_token}`,
     };
 
-    // Fetch the user's profile from Google People API
     const response = await axios.get(peopleUrl, { headers });
     const profileData = response.data;
 
-    // Log the response from Google People API
     console.log('Google People API Response:', profileData);
 
-    // Parse the profile data
     const user = {
       name: profileData.names && profileData.names.length > 0 ? profileData.names[0].displayName : 'N/A',
       email: profileData.emailAddresses && profileData.emailAddresses.length > 0 ? profileData.emailAddresses[0].value : 'N/A',
