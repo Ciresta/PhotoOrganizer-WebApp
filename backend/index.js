@@ -6,11 +6,16 @@ const cors = require('cors');
 const oauthController = require('./controllers/oauthController');
 const uploadController = require('./controllers/uploadController');
 const refreshTokenMiddleware = require('./middlewares/refreshTokenMiddleware');
+const connectToDatabase = require('./config/db'); // Use the Mongoose-based connection
 
 const app = express();
 const port = process.env.PORT || 5000;
 
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:3000', // Replace with your React app's URL
+  credentials: true
+}));
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
@@ -37,7 +42,16 @@ app.get('/user/profile', refreshTokenMiddleware, (req, res) => {
   uploadController.getUserProfile(req, res, oauth2Client);
 });
 
+// Route to search photos using Google Vision API
+app.post('/searchPhotos', refreshTokenMiddleware, uploadController.searchPhotos);
 
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
-});
+// Connect to the database and then start the server
+connectToDatabase()
+  .then(() => {
+    app.listen(port, () => {
+      console.log(`Server is running on http://localhost:${port}`);
+    });
+  })
+  .catch((err) => {
+    console.error("Failed to connect to MongoDB", err);
+  });
