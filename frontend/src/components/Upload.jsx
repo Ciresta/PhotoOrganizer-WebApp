@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import axios from 'axios';
-import { FaFolderOpen, FaTrashAlt } from 'react-icons/fa';
+import { FaFolderOpen, FaTrashAlt, FaImage } from 'react-icons/fa';
 
 const Upload = () => {
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -44,6 +44,7 @@ const Upload = () => {
       size: file.size,
       type: file.type,
       file: file,
+      preview: URL.createObjectURL(file), // Create a preview URL for the image
       customTags: [], // Initialize custom tags for each file
     }));
     setUploadedFiles((prev) => [...prev, ...newFiles]);
@@ -171,7 +172,8 @@ const Upload = () => {
 
         <table className="table-auto w-full text-left">
           <thead>
-            <tr className="text-gray-600 text-lg">
+            <tr className="text-gray-600 text-center text-lg">
+              <th className="py-3"><FaImage className="text-lg text-center" /></th>
               <th className="py-3">Name</th>
               <th className="py-3">Size</th>
               <th className="py-3">Type</th>
@@ -182,7 +184,10 @@ const Upload = () => {
           <tbody>
             {uploadedFiles.length > 0 ? (
               uploadedFiles.map((file, index) => (
-                <tr key={index} className="border-t">
+                <tr key={index} className="border text-center">
+                  <td className="py-4">
+                    <img src={file.preview} alt={file.name} className="w-16 h-16 object-cover rounded" /> {/* Image Preview */}
+                  </td>
                   <td className="py-4">
                     <p className="font-medium text-lg">{file.name}</p>
                   </td>
@@ -236,7 +241,7 @@ const Upload = () => {
               ))
             ) : (
               <tr>
-                <td colSpan="5" className="text-center py-4 text-gray-500">No files uploaded yet.</td>
+                <td colSpan="6" className="text-center py-4 text-gray-500">No files uploaded yet.</td>
               </tr>
             )}
           </tbody>

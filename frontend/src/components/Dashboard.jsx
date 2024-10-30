@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import FilterModal from './DateFilter';
+import ImageViewer from './ImageViewer'; // Import ImageViewer component
 import { format, isToday, isYesterday, parseISO } from 'date-fns';
 
 const Dashboard = () => {
@@ -10,6 +11,7 @@ const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
+  const [selectedPhoto, setSelectedPhoto] = useState(null); // State for selected photo
 
   // Fetch photos from the backend
   const fetchPhotos = async (fromDate, toDate, location) => {
@@ -82,16 +84,14 @@ const Dashboard = () => {
     if (e.key === 'Enter') {
       setIsLoading(true);
       setSearchResults([]); // Clear previous results
-  
-      console.log('Searching for:', searchTerm); // Log the search term
-  
+
       try {
         const token = localStorage.getItem('token');
         if (!token) {
           setErrorMessage('No authentication token found. Please log in.');
           return;
         }
-  
+
         // Call the backend searchPhotos endpoint
         const response = await axios.post('http://localhost:5000/searchPhotos', {
           searchTerm,
@@ -100,9 +100,7 @@ const Dashboard = () => {
             Authorization: `Bearer ${token}`,
           },
         });
-  
-        console.log('Search response:', response.data); // Log the response
-  
+
         setSearchResults(response.data); // Update search results
       } catch (error) {
         console.error('Error searching photos:', error.response?.data || error.message);
@@ -112,7 +110,7 @@ const Dashboard = () => {
       }
     }
   };
-  
+
   const groupedPhotos = groupPhotosByDate(photos);
 
   return (
@@ -159,20 +157,22 @@ const Dashboard = () => {
       {isLoading && <p className="mt-4 text-blue-500">Loading...</p>} {/* Loader */}
 
       {/* Render search results */}
-      {/* Render search results */}
       {searchResults.length > 0 && (
         <div>
           <h2 className="text-2xl font-semibold mb-4">Search Results:</h2>
           <div className="grid grid-cols-3 gap-4">
             {searchResults.map((photo, index) => (
-              <div key={index} className="border rounded-lg shadow-md overflow-hidden">
+              <div
+                key={index}
+                className="border rounded-lg shadow-md overflow-hidden cursor-pointer"
+                onClick={() => setSelectedPhoto(photo)} // Open ImageViewer on click
+              >
                 <img
-                  src={photo.url} // Using the URL from Google Photos
+                  src={photo.url}
                   alt={photo.filename}
                   className="w-full h-48 object-cover"
-                  onError={(e) => { e.target.src = '/path/to/fallback-image.jpg'; }} // Fallback on error
                 />
-                <p className="text-center mt-2">{photo.filename}</p> {/* Display filename */}
+                <p className="text-center mt-2">{photo.filename}</p>
               </div>
             ))}
           </div>
@@ -186,7 +186,11 @@ const Dashboard = () => {
             <h2 className="text-2xl font-semibold mb-4">{formatDateHeader(dateKey)}</h2>
             <div className="grid grid-cols-3 gap-4">
               {groupedPhotos[dateKey].map((photo, index) => (
-                <div key={index} className="border rounded-lg shadow-md overflow-hidden">
+                <div
+                  key={index}
+                  className="border rounded-lg shadow-md overflow-hidden cursor-pointer"
+                  onClick={() => setSelectedPhoto(photo)} // Open ImageViewer on click
+                >
                   <img
                     src={`${photo.url}=w500-h500`}
                     alt={photo.filename}
@@ -201,6 +205,14 @@ const Dashboard = () => {
 
       {photos.length === 0 && !errorMessage && (
         <p className="mt-4 text-gray-600">No photos found in your Google account for the selected date range.</p>
+      )}
+
+      {/* ImageViewer for selected photo */}
+      {selectedPhoto && (
+        <ImageViewer
+          photo={selectedPhoto}
+          onClose={() => setSelectedPhoto(null)} // Close ImageViewer
+        />
       )}
     </div>
   );
