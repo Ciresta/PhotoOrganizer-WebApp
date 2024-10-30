@@ -8,7 +8,8 @@ const Upload = () => {
   const [successPopupVisible, setSuccessPopupVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [tagInputs, setTagInputs] = useState([]); // State for tag inputs for each file
+  const [tagInputs, setTagInputs] = useState([]); // State for individual tag inputs
+  const [groupTags, setGroupTags] = useState(''); // State for group tags
 
   const handleFileChange = (e) => {
     const selectedFiles = Array.from(e.target.files);
@@ -55,20 +56,31 @@ const Upload = () => {
     if (newTag === "") return;
 
     const updatedFiles = [...uploadedFiles];
-    updatedFiles[index].customTags.push(newTag); // Add the new tag to the specific file's tags
+    updatedFiles[index].customTags.push(newTag);
     setUploadedFiles(updatedFiles);
 
-    // Clear the specific input field after adding
     setTagInputs((prev) => {
       const newInputs = [...prev];
-      newInputs[index] = ""; // Reset the input field for this file
+      newInputs[index] = "";
       return newInputs;
     });
   };
 
+  const handleAddGroupTag = () => {
+    if (groupTags.trim() === '') return;
+
+    const updatedFiles = uploadedFiles.map((file) => ({
+      ...file,
+      customTags: [...file.customTags, groupTags.trim()],
+    }));
+
+    setUploadedFiles(updatedFiles);
+    setGroupTags(''); // Clear the group tag input after adding
+  };
+
   const handleRemoveTag = (fileIndex, tagIndex) => {
     const updatedFiles = [...uploadedFiles];
-    updatedFiles[fileIndex].customTags.splice(tagIndex, 1); // Remove the tag from the specific file
+    updatedFiles[fileIndex].customTags.splice(tagIndex, 1);
     setUploadedFiles(updatedFiles);
   };
 
@@ -112,7 +124,6 @@ const Upload = () => {
     }
   };
 
-
   const handleRemoveFile = (index) => {
     setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
     setTagInputs(tagInputs.filter((_, i) => i !== index)); // Remove the associated input
@@ -141,6 +152,23 @@ const Upload = () => {
       </div>
 
       <div className="w-1/2">
+        {/* Group Tag Input */}
+        <div className="mb-4 flex">
+          <input
+            type="text"
+            value={groupTags}
+            onChange={(e) => setGroupTags(e.target.value)}
+            placeholder="Add group tags to apply to all files"
+            className="border border-gray-300 rounded-l px-2 py-1 text-gray-800 w-full"
+          />
+          <button
+            onClick={handleAddGroupTag}
+            className="bg-green-500 text-white px-4 rounded-r"
+          >
+            Add Group Tag
+          </button>
+        </div>
+
         <table className="table-auto w-full text-left">
           <thead>
             <tr className="text-gray-600 text-lg">
@@ -169,7 +197,7 @@ const Upload = () => {
                             onClick={() => handleRemoveTag(index, tagIndex)}
                             className="text-red-600 text-base ml-2 hover:text-red-800 transition-colors duration-200"
                           >
-                            &times; {/* X icon for removing tag */}
+                            &times;
                           </button>
                         </li>
                       ))}
@@ -181,7 +209,7 @@ const Upload = () => {
                         value={tagInputs[index] || ""}
                         onChange={(e) => {
                           const newInputs = [...tagInputs];
-                          newInputs[index] = e.target.value; // Update the specific input
+                          newInputs[index] = e.target.value;
                           setTagInputs(newInputs);
                         }}
                         placeholder="Add tag"
