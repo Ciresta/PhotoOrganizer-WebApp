@@ -2,6 +2,7 @@ const axios = require('axios');
 const fs = require('fs');
 const { VisionServiceClient } = require('@google-cloud/vision');
 const Photo = require('../models/PhotoSchema'); // Import the Photo model
+const { OAuth2Client } = require('google-auth-library');
 
 exports.uploadPhotos = async (req, res, oauth2Client) => {
   const files = req.files;
@@ -25,7 +26,7 @@ exports.uploadPhotos = async (req, res, oauth2Client) => {
 
       const stats = fs.statSync(filePath);
       const fileMetadata = {
-        filename: file.originalname,
+        filename: file.originalname, // Ensure the filename is the original name
         size: stats.size,
         type: file.mimetype,
         uploadedAt: new Date(),
@@ -49,7 +50,7 @@ exports.uploadPhotos = async (req, res, oauth2Client) => {
       const mediaItemRequest = {
         newMediaItems: [
           {
-            description: 'Uploaded via PhotoTaggerApp',
+            description: `Uploaded via PhotoTaggerApp - ${file.originalname}`, // Setting description
             simpleMediaItem: {
               uploadToken: uploadToken,
             },
@@ -78,7 +79,7 @@ exports.uploadPhotos = async (req, res, oauth2Client) => {
         });
       }
 
-      fs.unlinkSync(filePath);
+      fs.unlinkSync(filePath); // Clean up file from local storage after upload
     }
 
     res.status(200).json({ message: 'Photos processed successfully', results: uploadResults });
@@ -87,6 +88,7 @@ exports.uploadPhotos = async (req, res, oauth2Client) => {
     res.status(500).send('Error uploading photos: ' + error.message);
   }
 };
+
 
 
 
@@ -189,34 +191,104 @@ const { ImageAnnotatorClient } = require('@google-cloud/vision'); // Ensure this
 const path = require('path');
 
 // Your existing code...
-exports.searchPhotos = async (req, res) => {
-  console.log("Search Photos Request Received", req.body); // Log the incoming request
-  const { searchTerm, photos } = req.body;
+// exports.searchPhotos = async (req, res) => {
+//   console.log("Search Photos Request Received", req.body); // Log the incoming request
+//   const { searchTerm, photos } = req.body;
 
-  if (!searchTerm || !photos || photos.length === 0) {
-    return res.status(400).send('Search term and photos are required.');
+//   if (!searchTerm || !photos || photos.length === 0) {
+//     return res.status(400).send('Search term and photos are required.');
+//   }
+
+//   try {
+//     const client = new ImageAnnotatorClient({
+//       keyFilename: path.join(__dirname, 'sigma-archery-437616-m1-b0567f5f6e5c.json'), // Adjust the path if necessary
+//     });
+
+//     const matchingPhotos = [];
+
+//     for (const photo of photos) {
+//       console.log(`Analyzing photo: ${photo.url}`); // Log each photo being analyzed
+//       const [result] = await client.labelDetection(photo.url); // Call Vision API for label detection
+//       const labels = result.labelAnnotations.map(label => label.description.toLowerCase());
+
+//       if (labels.includes(searchTerm.toLowerCase())) {
+//         matchingPhotos.push(photo); // If the label matches the search term, add the photo
+//       }
+//     }
+
+//     res.status(200).json(matchingPhotos); // Return matching photos
+//   } catch (error) {
+//     console.error('Error searching photos:', error);
+//     res.status(500).send('Error searching photos');
+//   }
+// };
+exports.searchPhotos = async (req, res, oauth2Client) => {
+  const { searchTerm } = req.body;
+  console.log('Received search term:', searchTerm);
+
+  if (!oauth2Client.credentials?.access_token) {
+    return res.status(401).json({ error: 'No access token. Please log in again.' });
   }
 
   try {
-    const client = new ImageAnnotatorClient({
-      keyFilename: path.join(__dirname, 'sigma-archery-437616-m1-b0567f5f6e5c.json'), // Adjust the path if necessary
+    // Step 1: Search in MongoDB for matching photos by filename or customTags
+    const matchedPhotos = await Photo.find({
+      $or: [
+        { filename: { $regex: searchTerm, $options: 'i' } },
+        { customTags: { $regex: searchTerm, $options: 'i' } }
+      ]
     });
 
-    const matchingPhotos = [];
+    console.log('Matched photos from MongoDB:', matchedPhotos);
 
-    for (const photo of photos) {
-      console.log(`Analyzing photo: ${photo.url}`); // Log each photo being analyzed
-      const [result] = await client.labelDetection(photo.url); // Call Vision API for label detection
-      const labels = result.labelAnnotations.map(label => label.description.toLowerCase());
-
-      if (labels.includes(searchTerm.toLowerCase())) {
-        matchingPhotos.push(photo); // If the label matches the search term, add the photo
-      }
+    // Get filenames from the matched MongoDB records
+    const matchedFilenames = matchedPhotos.map(photo => photo.filename);
+    if (matchedFilenames.length === 0) {
+      return res.status(200).json([]); // No matches found
     }
 
-    res.status(200).json(matchingPhotos); // Return matching photos
+    // Step 2: Retrieve images from Google Photos API and filter by description
+    const photosUrl = 'https://photoslibrary.googleapis.com/v1/mediaItems:search';
+    const headers = {
+      Authorization: `Bearer ${oauth2Client.credentials.access_token}`,
+    };
+
+    const googlePhotos = [];
+    try {
+      // Make a single API call to retrieve recent photos from Google Photos
+      const response = await axios.post(
+        photosUrl,
+        { 
+          filters: { mediaTypeFilter: { mediaTypes: ["PHOTO"] } }
+        },
+        { headers }
+      );
+
+      console.log('Google Photos API response:', response.data);
+
+      // Filter photos returned by Google Photos to match filenames in descriptions
+      const photos = response.data.mediaItems || [];
+      const matchedGooglePhotos = photos.filter(photo => 
+        matchedFilenames.some(filename => photo.description?.includes(filename))
+      );
+
+      googlePhotos.push(...matchedGooglePhotos);
+    } catch (photoError) {
+      console.error('Error fetching photos from Google Photos:', photoError);
+    }
+
+    // Step 3: Format response data
+    const photoDetails = googlePhotos.map((photo) => ({
+      url: `${photo.baseUrl}=w500-h500`, // Resize as needed
+      filename: photo.filename,
+      creationTime: photo.mediaMetadata?.creationTime || null,
+      description: photo.description || 'No description',
+    }));
+
+    // Send formatted data back to client
+    res.status(200).json(photoDetails);
   } catch (error) {
     console.error('Error searching photos:', error);
-    res.status(500).send('Error searching photos');
+    res.status(500).json({ error: 'Error fetching photos from Google Photos' });
   }
 };

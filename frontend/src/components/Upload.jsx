@@ -77,33 +77,33 @@ const Upload = () => {
       setErrorMessage("Please select files before uploading.");
       return;
     }
-  
+
     setLoading(true);
     try {
       const formData = new FormData();
-  
+
       uploadedFiles.forEach((fileObj) => {
         formData.append('photos', fileObj.file);
       });
-  
+
       // Append customTags as a JSON array to ensure proper parsing on the server
       const tagsArray = uploadedFiles.map(file => file.customTags);
       formData.append('customTags', JSON.stringify(tagsArray));
-  
+
       const response = await axios.post('http://localhost:5000/add', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
-  
+
       console.log('Upload response:', response.data);
-  
+
       setSuccessPopupVisible(true);
       setTimeout(() => {
         setSuccessPopupVisible(false);
         window.location.href = "/home";
       }, 2000);
-  
+
     } catch (error) {
       console.error("Error uploading files:", error);
       setErrorMessage("Error uploading files. Please try again.");
@@ -111,18 +111,18 @@ const Upload = () => {
       setLoading(false);
     }
   };
-  
-  
+
+
   const handleRemoveFile = (index) => {
     setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
     setTagInputs(tagInputs.filter((_, i) => i !== index)); // Remove the associated input
   };
 
   return (
-    <div className="w-full h-screen flex justify-center items-start space-x-8 p-10" 
-         onDragOver={handleDragOver} 
-         onDrop={handleDrop}
-         onDragLeave={handleDragLeave}>
+    <div className="w-full h-screen flex justify-center items-start space-x-8 p-10"
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+      onDragLeave={handleDragLeave}>
       <div className="w-1/2">
         <div className={`border-4 border-dashed rounded-lg p-12 flex flex-col items-center justify-center h-[600px] ${isDragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-400 bg-[#f2f3f8]'}`}>
           <div className="mb-6">
@@ -130,11 +130,11 @@ const Upload = () => {
           </div>
           <p className="text-gray-600 text-lg mb-3">Drag and Drop Images here</p>
           or
-          <input 
-            type="file" 
-            onChange={handleFileChange} 
-            className="mb-4" 
-            multiple 
+          <input
+            type="file"
+            onChange={handleFileChange}
+            className="mb-4"
+            multiple
           />
           {errorMessage && <p className="text-red-500 mt-4">{errorMessage}</p>}
         </div>
@@ -161,16 +161,20 @@ const Upload = () => {
                   <td className="py-4 text-lg">{(file.size / 1024).toFixed(2)} KB</td>
                   <td className="py-4 text-lg">{file.type}</td>
                   <td className="py-4">
-                    <ul>
+                    <ul className="flex flex-wrap space-x-2">
                       {file.customTags.map((tag, tagIndex) => (
-                        <li key={tagIndex} className="flex items-center rounded-lg bg-gray-200">
-                          <span className="text-blue-500 ml-2">{tag}</span>
-                          <button onClick={() => handleRemoveTag(index, tagIndex)} className="text-red-500 text-lg ml-8">
+                        <li key={tagIndex} className="flex items-center bg-gray-300 rounded-full px-3 py-1 shadow-md text-sm">
+                          <span className="text-blue-600 font-semibold">{tag}</span>
+                          <button
+                            onClick={() => handleRemoveTag(index, tagIndex)}
+                            className="text-red-600 text-base ml-2 hover:text-red-800 transition-colors duration-200"
+                          >
                             &times; {/* X icon for removing tag */}
                           </button>
                         </li>
                       ))}
                     </ul>
+
                     <div className="flex mt-2">
                       <input
                         type="text"
@@ -192,8 +196,8 @@ const Upload = () => {
                     </div>
                   </td>
                   <td className="py-4">
-                    <button 
-                      onClick={() => handleRemoveFile(index)} 
+                    <button
+                      onClick={() => handleRemoveFile(index)}
                       className="text-red-500 text-lg"
                       title="Delete File"
                     >
@@ -209,8 +213,8 @@ const Upload = () => {
             )}
           </tbody>
         </table>
-        <button 
-          onClick={handleUpload} 
+        <button
+          onClick={handleUpload}
           className={`bg-blue-500 text-white px-4 py-2 rounded flex items-center justify-center ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
           disabled={loading}
         >

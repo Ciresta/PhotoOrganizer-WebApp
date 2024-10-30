@@ -20,7 +20,7 @@ const Dashboard = () => {
         setErrorMessage('No authentication token found. Please log in.');
         return;
       }
-  
+
       const response = await axios.get(`http://localhost:5000/photos`, {
         params: {
           fromDate: fromDate || undefined,
@@ -31,14 +31,14 @@ const Dashboard = () => {
           Authorization: `Bearer ${token}`,
         },
       });
-  
+
       setPhotos(response.data);
     } catch (error) {
       console.error('Error fetching photos:', error.response || error);
       setErrorMessage(error.response?.data?.error || 'Failed to load photos. Please try again.');
     }
   };
-  
+
   useEffect(() => {
     fetchPhotos();
   }, []);
@@ -78,38 +78,41 @@ const Dashboard = () => {
     return format(date, 'EEE, MMM d');
   };
 
-  // Handle search functionality
   const handleSearch = async (e) => {
     if (e.key === 'Enter') {
       setIsLoading(true);
       setSearchResults([]); // Clear previous results
-
+  
+      console.log('Searching for:', searchTerm); // Log the search term
+  
       try {
         const token = localStorage.getItem('token');
         if (!token) {
           setErrorMessage('No authentication token found. Please log in.');
           return;
         }
-
+  
         // Call the backend searchPhotos endpoint
         const response = await axios.post('http://localhost:5000/searchPhotos', {
           searchTerm,
-          photos, // Pass the cached photos for analysis
         }, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
+  
+        console.log('Search response:', response.data); // Log the response
+  
         setSearchResults(response.data); // Update search results
       } catch (error) {
-        console.error('Error searching photos:', error.response.data || error.message);
+        console.error('Error searching photos:', error.response?.data || error.message);
         setErrorMessage(error.response?.data?.error || 'Failed to search photos. Please try again.');
       } finally {
         setIsLoading(false);
       }
     }
   };
-
+  
   const groupedPhotos = groupPhotosByDate(photos);
 
   return (
@@ -156,6 +159,7 @@ const Dashboard = () => {
       {isLoading && <p className="mt-4 text-blue-500">Loading...</p>} {/* Loader */}
 
       {/* Render search results */}
+      {/* Render search results */}
       {searchResults.length > 0 && (
         <div>
           <h2 className="text-2xl font-semibold mb-4">Search Results:</h2>
@@ -163,10 +167,12 @@ const Dashboard = () => {
             {searchResults.map((photo, index) => (
               <div key={index} className="border rounded-lg shadow-md overflow-hidden">
                 <img
-                  src={`${photo.url}=w500-h500`}
+                  src={photo.url} // Using the URL from Google Photos
                   alt={photo.filename}
                   className="w-full h-48 object-cover"
+                  onError={(e) => { e.target.src = '/path/to/fallback-image.jpg'; }} // Fallback on error
                 />
+                <p className="text-center mt-2">{photo.filename}</p> {/* Display filename */}
               </div>
             ))}
           </div>

@@ -42,8 +42,12 @@ app.get('/user/profile', refreshTokenMiddleware, (req, res) => {
   uploadController.getUserProfile(req, res, oauth2Client);
 });
 
+app.post('/searchPhotos', refreshTokenMiddleware, (req, res) => {
+  uploadController.searchPhotos(req, res, oauth2Client);
+});
+
 // Route to search photos using Google Vision API
-app.post('/searchPhotos', refreshTokenMiddleware, uploadController.searchPhotos);
+// app.post('/searchPhotos', refreshTokenMiddleware, uploadController.searchPhotos);
 
 // Connect to the database and then start the server
 connectToDatabase()
