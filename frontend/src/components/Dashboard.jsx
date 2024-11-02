@@ -35,6 +35,7 @@ const Dashboard = () => {
       });
 
       setPhotos(response.data);
+      console.log(response.data);
     } catch (error) {
       console.error('Error fetching photos:', error.response || error);
       setErrorMessage(error.response?.data?.error || 'Failed to load photos. Please try again.');
@@ -49,6 +50,8 @@ const Dashboard = () => {
   const handleFilterApply = (fromDate, toDate, location) => {
     fetchPhotos(fromDate, toDate, location);
   };
+
+
 
   // Group photos by date
   const groupPhotosByDate = (photos) => {
@@ -108,6 +111,30 @@ const Dashboard = () => {
       } finally {
         setIsLoading(false);
       }
+    }
+  };
+
+  const handlePhotoClick = async (photoId) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setErrorMessage('No authentication token found. Please log in.');
+      return;
+    }
+    console.log('Photo ID:', photoId);
+
+    try {
+      const response = await axios.get(`http://localhost:5000/photos/${photoId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      // Log the description to the console and set it for ImageViewer
+      console.log('Photo Description:', response.data.description);
+      setSelectedPhoto(response.data);
+    } catch (error) {
+      console.error('Error fetching photo details:', error.response || error);
+      setErrorMessage('Failed to load photo details. Please try again.');
     }
   };
 
@@ -185,11 +212,11 @@ const Dashboard = () => {
           <div key={dateKey}>
             <h2 className="text-2xl font-semibold mb-4">{formatDateHeader(dateKey)}</h2>
             <div className="grid grid-cols-3 gap-4">
-              {groupedPhotos[dateKey].map((photo, index) => (
+              {groupedPhotos[dateKey].map((photo) => (
                 <div
-                  key={index}
+                  key={photo.id}
                   className="border rounded-lg shadow-md overflow-hidden cursor-pointer"
-                  onClick={() => setSelectedPhoto(photo)} // Open ImageViewer on click
+                  onClick={() => handlePhotoClick(photo.id)} // Use the photo ID here
                 >
                   <img
                     src={`${photo.url}=w500-h500`}
@@ -201,6 +228,7 @@ const Dashboard = () => {
             </div>
           </div>
         ))}
+
       </div>
 
       {photos.length === 0 && !errorMessage && (

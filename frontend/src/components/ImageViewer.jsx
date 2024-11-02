@@ -29,8 +29,11 @@ const ImageViewer = ({ photo, onClose }) => {
             {/* Photo Information */}
             <p className="text-gray-700 mb-2"><strong>Date:</strong> {new Date(photo.creationTime).toLocaleDateString()}</p>
             <p className="text-gray-700 mb-2"><strong>Resolution:</strong> {photo.width} x {photo.height}</p>
-            <p className="text-gray-700 mb-2"><strong>Size:</strong> {(photo.size / 1024).toFixed(2)} KB</p>
-            <p className="text-gray-700 mb-2"><strong>Type:</strong> {photo.type || 'Unknown'}</p>
+            {photo.size && <p className="text-gray-700 mb-2"><strong>Size:</strong> {(photo.size / 1024).toFixed(2)} KB</p>}
+            <p className="text-gray-700 mb-2"><strong>Type:</strong> {photo.mimeType || 'Unknown'}</p>
+            
+            {/* Display the Description */}
+            <p className="text-gray-700 mb-4"><strong>Description:</strong> {photo.description}</p> {/* New line for description */}
 
             {/* Location and Additional Details */}
             <p className="text-gray-700 mb-2"><strong>Location:</strong> {photo.location || 'Not Available'}</p>

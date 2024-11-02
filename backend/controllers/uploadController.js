@@ -142,6 +142,7 @@ exports.getGooglePhotos = async (req, res, oauth2Client) => {
       : photos;
 
     const photoDetails = filteredPhotos.map((photo) => ({
+      id: photo.id,
       url: photo.baseUrl,
       filename: photo.filename,
       creationTime: photo.mediaMetadata.creationTime || null, 
@@ -290,5 +291,39 @@ exports.searchPhotos = async (req, res, oauth2Client) => {
   } catch (error) {
     console.error('Error searching photos:', error);
     res.status(500).json({ error: 'Error fetching photos from Google Photos' });
+  }
+};
+
+exports.getPhotoDetails = async (req, res, oauth2Client) => {
+  const { photoId } = req.params;
+  console.log("PHOTO ID: "+photoId);
+  if (!oauth2Client.credentials.access_token) {
+    return res.status(401).json({ error: 'Unauthorized: No access token provided' });
+  }
+
+  try {
+    const photoDetailsUrl = `https://photoslibrary.googleapis.com/v1/mediaItems/${photoId}`;
+    const headers = {
+      Authorization: `Bearer ${oauth2Client.credentials.access_token}`,
+    };
+
+    const response = await axios.get(photoDetailsUrl, { headers });
+    const photoData = response.data;
+
+    const photoDetails = {
+      id: photoData.id,
+      url: photoData.baseUrl,
+      filename: photoData.filename,
+      description: photoData.description || 'No description',
+      creationTime: photoData.mediaMetadata.creationTime,
+      width: photoData.mediaMetadata.width,
+      height: photoData.mediaMetadata.height,
+      mimeType: photoData.mimeType,
+    };
+
+    res.status(200).json(photoDetails);
+  } catch (error) {
+    console.error('Error fetching photo details:', error.response ? error.response.data : error.message);
+    res.status(500).json({ error: 'Error fetching photo details from Google Photos' });
   }
 };

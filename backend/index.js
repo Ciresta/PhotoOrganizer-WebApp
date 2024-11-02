@@ -46,6 +46,10 @@ app.post('/searchPhotos', refreshTokenMiddleware, (req, res) => {
   uploadController.searchPhotos(req, res, oauth2Client);
 });
 
+app.get('/photos/:photoId',refreshTokenMiddleware, (req, res) => {
+  uploadController.getPhotoDetails(req, res, oauth2Client);
+});
+
 // Route to search photos using Google Vision API
 // app.post('/searchPhotos', refreshTokenMiddleware, uploadController.searchPhotos);
 
