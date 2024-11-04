@@ -120,23 +120,26 @@ const Dashboard = () => {
       setErrorMessage('No authentication token found. Please log in.');
       return;
     }
-    console.log('Photo ID:', photoId);
-
+  
     try {
+      // Fetch photo details along with custom tags
       const response = await axios.get(`http://localhost:5000/photos/${photoId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-
-      // Log the description to the console and set it for ImageViewer
-      console.log('Photo Description:', response.data.description);
-      setSelectedPhoto(response.data);
+  
+      const { photoDetails, customTags } = response.data;
+  
+      // Combine photo details with custom tags for ImageViewer
+      const photoWithTags = { ...photoDetails, tags: customTags || [] };
+      setSelectedPhoto(photoWithTags); // Set photo with tags for ImageViewer
     } catch (error) {
       console.error('Error fetching photo details:', error.response || error);
       setErrorMessage('Failed to load photo details. Please try again.');
     }
   };
+    
 
   const groupedPhotos = groupPhotosByDate(photos);
 

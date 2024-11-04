@@ -327,3 +327,93 @@ exports.getPhotoDetails = async (req, res, oauth2Client) => {
     res.status(500).json({ error: 'Error fetching photo details from Google Photos' });
   }
 };
+
+exports.getPhotoByFileName = async (req, res) => {
+  try {
+    const { description } = req.query;
+    
+    // Ensure description is provided
+    if (!description) {
+      return res.status(400).json({ error: 'Description query parameter is required' });
+    }
+
+    // const filename = description.split(' - ')[1]; // Extract filename
+    const filename = 'orange.jpg'; // Extract filename
+
+    // Check if filename is valid
+    if (!filename) {
+      return res.status(400).json({ error: 'Filename could not be extracted from description' });
+    }
+
+    const photo = await Photo.findOne({ filename });
+    if (!photo) {
+      return res.status(404).json({ error: 'Photo not found' });
+    }
+
+    res.json(photo);
+  } catch (error) {
+    console.error('Error fetching photo:', error);
+    res.status(500).json({ error: 'Failed to fetch photo' });
+  }
+};
+
+
+exports.getPhotoDetailsWithTags = async (req, res, oauth2Client) => {
+  const { photoId } = req.params;
+  console.log("PHOTO ID:", photoId);
+
+  if (!oauth2Client.credentials.access_token) {
+    return res.status(401).json({ error: 'Unauthorized: No access token provided' });
+  }
+
+  try {
+    // Step 1: Fetch the photo details from Google Photos
+    const photoDetailsUrl = `https://photoslibrary.googleapis.com/v1/mediaItems/${photoId}`;
+    const headers = {
+      Authorization: `Bearer ${oauth2Client.credentials.access_token}`,
+    };
+
+    const response = await axios.get(photoDetailsUrl, { headers });
+    const photoData = response.data;
+
+    // Step 2: Extract filename from the description
+    const filename = photoData.description ? photoData.description.split(' - ')[1] : null;
+    if (!filename) {
+      console.error('Filename not found in description');
+      return res.status(200).json({
+        photoDetails: {
+          id: photoData.id,
+          url: photoData.baseUrl,
+          filename: photoData.filename,
+          description: photoData.description || 'No description',
+          creationTime: photoData.mediaMetadata.creationTime,
+          width: photoData.mediaMetadata.width,
+          height: photoData.mediaMetadata.height,
+          mimeType: photoData.mimeType,
+        },
+        customTags: [] // No tags if filename extraction fails
+      });
+    }
+
+    // Step 3: Fetch custom tags based on the filename
+    const photoRecord = await Photo.findOne({ filename });
+    const customTags = photoRecord ? photoRecord.customTags : [];
+
+    // Step 4: Combine photo details with custom tags and send response
+    const photoDetails = {
+      id: photoData.id,
+      url: photoData.baseUrl,
+      filename: photoData.filename,
+      description: photoData.description || 'No description',
+      creationTime: photoData.mediaMetadata.creationTime,
+      width: photoData.mediaMetadata.width,
+      height: photoData.mediaMetadata.height,
+      mimeType: photoData.mimeType,
+    };
+
+    res.status(200).json({ photoDetails, customTags });
+  } catch (error) {
+    console.error('Error fetching photo details:', error.response ? error.response.data : error.message);
+    res.status(500).json({ error: 'Error fetching photo details from Google Photos' });
+  }
+};

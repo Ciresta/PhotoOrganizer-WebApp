@@ -47,8 +47,15 @@ app.post('/searchPhotos', refreshTokenMiddleware, (req, res) => {
 });
 
 app.get('/photos/:photoId',refreshTokenMiddleware, (req, res) => {
-  uploadController.getPhotoDetails(req, res, oauth2Client);
+  uploadController.getPhotoDetailsWithTags(req, res, oauth2Client);
 });
+// app.get('/photos/:photoId',refreshTokenMiddleware, (req, res) => {
+//   uploadController.getPhotoDetails(req, res, oauth2Client);
+// });
+
+// app.get('/photoByFilename',refreshTokenMiddleware, (req, res) => {
+//   uploadController.getPhotoByFileName(req, res, oauth2Client);
+// });
 
 // Route to search photos using Google Vision API
 // app.post('/searchPhotos', refreshTokenMiddleware, uploadController.searchPhotos);
