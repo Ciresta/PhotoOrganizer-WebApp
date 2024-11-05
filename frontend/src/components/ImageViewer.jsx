@@ -1,27 +1,61 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTag, faTimes } from '@fortawesome/free-solid-svg-icons';
 
 const ImageViewer = ({ photo, onClose }) => {
   const [newTag, setNewTag] = useState('');
+  const [tags, setTags] = useState(photo.tags || []);
 
   if (!photo) return null;
 
-  const handleTagRemove = (tag) => {
-    // Placeholder function to remove tag - implement this with backend API call if necessary
-    console.log(`Removing tag: ${tag}`);
+  const extractFilename = (description) => {
+    const parts = description.split('-');
+    return parts[parts.length - 1].trim(); // Extracts filename from description
   };
 
-  const handleAddTag = () => {
-    // Placeholder function to add tag - implement this with backend API call if necessary
-    console.log(`Adding tag: ${newTag}`);
-    setNewTag(''); // Clear input field after adding
+  const handleTagRemove = async (tag) => {
+    const filename = extractFilename(photo.description);
+    console.log(`Removing tag: ${tag}`);
+
+    try {
+      const response = await axios.delete('http://localhost:5000/deletetags', {
+        data: {  // Using data for DELETE request body
+          tagName: tag,
+          filename,
+        },
+      });
+
+      if (response.status === 200) {
+        setTags(tags.filter(t => t !== tag)); // Update local tags array
+      }
+    } catch (error) {
+      console.error('Error deleting tag:', error.response?.data || error.message);
+    }
+  };
+
+  const handleAddTag = async () => {
+    const filename = extractFilename(photo.description);
+
+    try {
+      const response = await axios.post('http://localhost:5000/addtags', {
+        tagName: newTag,
+        filename,
+      });
+
+      if (response.status === 200) {
+        setTags([...tags, newTag]); // Update local tags array
+        setNewTag(''); // Clear input field after adding
+      }
+    } catch (error) {
+      console.error('Error adding tag:', error.response?.data || error.message);
+    }
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center">
       <div className="bg-white rounded-lg shadow-xl w-3/4 h-3/4 overflow-hidden relative">
-        
+
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -32,7 +66,6 @@ const ImageViewer = ({ photo, onClose }) => {
 
         {/* Image and Details Section */}
         <div className="flex h-full">
-          {/* Image Display */}
           <div className="w-2/3 h-full bg-gray-200 flex items-center justify-center">
             <img
               src={`${photo.url}=w800-h800`}
@@ -41,7 +74,6 @@ const ImageViewer = ({ photo, onClose }) => {
             />
           </div>
 
-          {/* Details Section */}
           <div className="w-1/3 bg-gray-50 p-6 overflow-y-auto">
             <h2 className="text-2xl font-medium text-gray-800 mb-4">{photo.filename}</h2>
             <p className="text-gray-600 mb-2"><strong>Date:</strong> {new Date(photo.creationTime).toLocaleDateString()}</p>
@@ -54,9 +86,9 @@ const ImageViewer = ({ photo, onClose }) => {
             {/* Custom Tags Section */}
             <div className="mt-6">
               <h3 className="text-lg font-semibold text-gray-800 mb-3">Custom Tags</h3>
-              {photo.tags && photo.tags.length > 0 ? (
+              {tags.length > 0 ? (
                 <div className="flex flex-wrap gap-2 mb-4">
-                  {photo.tags.map((tag, index) => (
+                  {tags.map((tag, index) => (
                     <div
                       key={index}
                       className="flex items-center bg-blue-100 text-blue-700 px-3 py-1 rounded-full shadow hover:bg-blue-200 transition duration-200 ease-in-out"
@@ -83,18 +115,18 @@ const ImageViewer = ({ photo, onClose }) => {
                   value={newTag}
                   onChange={(e) => setNewTag(e.target.value)}
                   placeholder="Add a tag..."
-                  className="flex-grow px-4 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:border-blue-500 transition-colors"
+                  className="flex-grow px-4 py-3 border border-gray-300 rounded-l-md focus:outline-none focus:border-blue-500 transition-shadow duration-200 shadow-sm focus:shadow-lg"
                 />
                 <button
                   onClick={handleAddTag}
                   disabled={!newTag}
-                  className={`px-4 py-2 rounded-r-md bg-blue-500 text-white font-medium focus:outline-none transition-all ${
-                    newTag ? 'hover:bg-blue-600' : 'opacity-50 cursor-not-allowed'
-                  }`}
+                  className={`ml-2 px-6 py-3 rounded-r-md text-white font-semibold transition-all duration-200 ease-in-out ${newTag ? 'bg-blue-600 hover:bg-blue-700 shadow-md' : 'bg-gray-300 cursor-not-allowed'
+                    }`}
                 >
                   Add Tag
                 </button>
               </div>
+
             </div>
           </div>
         </div>

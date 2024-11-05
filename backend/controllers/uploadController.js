@@ -192,37 +192,38 @@ const { ImageAnnotatorClient } = require('@google-cloud/vision'); // Ensure this
 const path = require('path');
 
 // Your existing code...
-// exports.searchPhotos = async (req, res) => {
-//   console.log("Search Photos Request Received", req.body); // Log the incoming request
-//   const { searchTerm, photos } = req.body;
+exports.searchPhotoswithvision = async (req, res) => {
+  console.log("Search Photos Request Received", req.body); // Log the incoming request
+  const { searchTerm, photos } = req.body;
 
-//   if (!searchTerm || !photos || photos.length === 0) {
-//     return res.status(400).send('Search term and photos are required.');
-//   }
+  if (!searchTerm || !photos || photos.length === 0) {
+    return res.status(400).send('Search term and photos are required.');
+  }
 
-//   try {
-//     const client = new ImageAnnotatorClient({
-//       keyFilename: path.join(__dirname, 'sigma-archery-437616-m1-b0567f5f6e5c.json'), // Adjust the path if necessary
-//     });
+  try {
+    const client = new ImageAnnotatorClient({
+      keyFilename: path.join(__dirname, 'sigma-archery-437616-m1-b0567f5f6e5c.json'), // Adjust the path if necessary
+    });
 
-//     const matchingPhotos = [];
+    const matchingPhotos = [];
 
-//     for (const photo of photos) {
-//       console.log(`Analyzing photo: ${photo.url}`); // Log each photo being analyzed
-//       const [result] = await client.labelDetection(photo.url); // Call Vision API for label detection
-//       const labels = result.labelAnnotations.map(label => label.description.toLowerCase());
+    for (const photo of photos) {
+      console.log(`Analyzing photo: ${photo.url}`); // Log each photo being analyzed
+      const [result] = await client.labelDetection(photo.url); // Call Vision API for label detection
+      const labels = result.labelAnnotations.map(label => label.description.toLowerCase());
 
-//       if (labels.includes(searchTerm.toLowerCase())) {
-//         matchingPhotos.push(photo); // If the label matches the search term, add the photo
-//       }
-//     }
+      if (labels.includes(searchTerm.toLowerCase())) {
+        matchingPhotos.push(photo); // If the label matches the search term, add the photo
+      }
+    }
 
-//     res.status(200).json(matchingPhotos); // Return matching photos
-//   } catch (error) {
-//     console.error('Error searching photos:', error);
-//     res.status(500).send('Error searching photos');
-//   }
-// };
+    res.status(200).json(matchingPhotos); // Return matching photos
+  } catch (error) {
+    console.error('Error searching photos:', error);
+    res.status(500).send('Error searching photos');
+  }
+};
+
 exports.searchPhotos = async (req, res, oauth2Client) => {
   const { searchTerm } = req.body;
   console.log('Received search term:', searchTerm);
@@ -418,37 +419,44 @@ exports.getPhotoDetailsWithTags = async (req, res, oauth2Client) => {
   }
 };
 
-
-exports.addTag = async (req, res) => {
-  const { filename } = req.params;
-  const { tag } = req.body;
+exports.addCustomTags = async (req, res) => {
+  const { tagName, filename } = req.body;
 
   try {
     const photo = await Photo.findOneAndUpdate(
       { filename },
-      { $addToSet: { customTags: tag } }, // $addToSet prevents duplicates
+      { $addToSet: { customTags: tagName } },
       { new: true }
     );
-    if (!photo) return res.status(404).json({ error: 'Photo not found' });
-    res.json(photo);
+
+    if (!photo) {
+      return res.status(404).json({ message: 'Photo not found' });
+    }
+
+    res.status(200).json(photo);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to add tag' });
+    console.error('Error adding custom tag:', error);
+    res.status(500).json({ message: 'Failed to add custom tag' });
   }
 };
 
-exports.removeTag = async (req, res) => {
-  const { filename } = req.params;
-  const { tag } = req.body;
+exports.deleteCustomTags = async (req, res) => {
+  const { tagName, filename } = req.body;
 
   try {
     const photo = await Photo.findOneAndUpdate(
       { filename },
-      { $pull: { customTags: tag } }, // $pull removes the tag
+      { $pull: { customTags: tagName } },
       { new: true }
     );
-    if (!photo) return res.status(404).json({ error: 'Photo not found' });
-    res.json(photo);
+
+    if (!photo) {
+      return res.status(404).json({ message: 'Photo not found' });
+    }
+
+    res.status(200).json(photo);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to remove tag' });
+    console.error('Error deleting custom tag:', error);
+    res.status(500).json({ message: 'Failed to delete custom tag' });
   }
 };

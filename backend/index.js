@@ -53,6 +53,16 @@ app.get('/photos/:photoId',refreshTokenMiddleware, (req, res) => {
 app.post('/:filename/tags', refreshTokenMiddleware, (req, res) => {
   uploadController.addTag(req, res, oauth2Client);
 });
+
+app.post('/addtags', refreshTokenMiddleware, (req, res) => {
+  uploadController.addCustomTags(req, res, oauthController.oauth2Client);
+});
+
+app.delete('/deletetags', refreshTokenMiddleware, (req, res) => {
+  uploadController.deleteCustomTags(req, res, oauthController.oauth2Client);
+});
+
+
 // app.get('/photos/:photoId',refreshTokenMiddleware, (req, res) => {
 //   uploadController.getPhotoDetails(req, res, oauth2Client);
 // });

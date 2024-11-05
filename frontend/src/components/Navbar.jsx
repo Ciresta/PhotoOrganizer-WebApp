@@ -11,7 +11,7 @@ import userProfileIcon from '../assets/images/signuser.svg';
 
 const Navbar = ({ isAuthenticated, onLogout, user }) => {
   const [dropdownVisible, setDropdownVisible] = useState(false);
-  const [filterModalVisible, setFilterModalVisible] = useState(false); // Modal state
+  // const [filterModalVisible, setFilterModalVisible] = useState(false); // Modal state
 
   const toggleDropdown = () => {
     setDropdownVisible(!dropdownVisible);
