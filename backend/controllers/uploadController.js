@@ -294,68 +294,68 @@ exports.searchPhotos = async (req, res, oauth2Client) => {
   }
 };
 
-exports.getPhotoDetails = async (req, res, oauth2Client) => {
-  const { photoId } = req.params;
-  console.log("PHOTO ID: "+photoId);
-  if (!oauth2Client.credentials.access_token) {
-    return res.status(401).json({ error: 'Unauthorized: No access token provided' });
-  }
+// exports.getPhotoDetails = async (req, res, oauth2Client) => {
+//   const { photoId } = req.params;
+//   console.log("PHOTO ID: "+photoId);
+//   if (!oauth2Client.credentials.access_token) {
+//     return res.status(401).json({ error: 'Unauthorized: No access token provided' });
+//   }
 
-  try {
-    const photoDetailsUrl = `https://photoslibrary.googleapis.com/v1/mediaItems/${photoId}`;
-    const headers = {
-      Authorization: `Bearer ${oauth2Client.credentials.access_token}`,
-    };
+//   try {
+//     const photoDetailsUrl = `https://photoslibrary.googleapis.com/v1/mediaItems/${photoId}`;
+//     const headers = {
+//       Authorization: `Bearer ${oauth2Client.credentials.access_token}`,
+//     };
 
-    const response = await axios.get(photoDetailsUrl, { headers });
-    const photoData = response.data;
+//     const response = await axios.get(photoDetailsUrl, { headers });
+//     const photoData = response.data;
 
-    const photoDetails = {
-      id: photoData.id,
-      url: photoData.baseUrl,
-      filename: photoData.filename,
-      description: photoData.description || 'No description',
-      creationTime: photoData.mediaMetadata.creationTime,
-      width: photoData.mediaMetadata.width,
-      height: photoData.mediaMetadata.height,
-      mimeType: photoData.mimeType,
-    };
+//     const photoDetails = {
+//       id: photoData.id,
+//       url: photoData.baseUrl,
+//       filename: photoData.filename,
+//       description: photoData.description || 'No description',
+//       creationTime: photoData.mediaMetadata.creationTime,
+//       width: photoData.mediaMetadata.width,
+//       height: photoData.mediaMetadata.height,
+//       mimeType: photoData.mimeType,
+//     };
 
-    res.status(200).json(photoDetails);
-  } catch (error) {
-    console.error('Error fetching photo details:', error.response ? error.response.data : error.message);
-    res.status(500).json({ error: 'Error fetching photo details from Google Photos' });
-  }
-};
+//     res.status(200).json(photoDetails);
+//   } catch (error) {
+//     console.error('Error fetching photo details:', error.response ? error.response.data : error.message);
+//     res.status(500).json({ error: 'Error fetching photo details from Google Photos' });
+//   }
+// };
 
-exports.getPhotoByFileName = async (req, res) => {
-  try {
-    const { description } = req.query;
+// exports.getPhotoByFileName = async (req, res) => {
+//   try {
+//     const { description } = req.query;
     
-    // Ensure description is provided
-    if (!description) {
-      return res.status(400).json({ error: 'Description query parameter is required' });
-    }
+//     // Ensure description is provided
+//     if (!description) {
+//       return res.status(400).json({ error: 'Description query parameter is required' });
+//     }
 
-    // const filename = description.split(' - ')[1]; // Extract filename
-    const filename = 'orange.jpg'; // Extract filename
+//     // const filename = description.split(' - ')[1]; // Extract filename
+//     const filename = 'orange.jpg'; // Extract filename
 
-    // Check if filename is valid
-    if (!filename) {
-      return res.status(400).json({ error: 'Filename could not be extracted from description' });
-    }
+//     // Check if filename is valid
+//     if (!filename) {
+//       return res.status(400).json({ error: 'Filename could not be extracted from description' });
+//     }
 
-    const photo = await Photo.findOne({ filename });
-    if (!photo) {
-      return res.status(404).json({ error: 'Photo not found' });
-    }
+//     const photo = await Photo.findOne({ filename });
+//     if (!photo) {
+//       return res.status(404).json({ error: 'Photo not found' });
+//     }
 
-    res.json(photo);
-  } catch (error) {
-    console.error('Error fetching photo:', error);
-    res.status(500).json({ error: 'Failed to fetch photo' });
-  }
-};
+//     res.json(photo);
+//   } catch (error) {
+//     console.error('Error fetching photo:', error);
+//     res.status(500).json({ error: 'Failed to fetch photo' });
+//   }
+// };
 
 
 exports.getPhotoDetailsWithTags = async (req, res, oauth2Client) => {
@@ -415,5 +415,40 @@ exports.getPhotoDetailsWithTags = async (req, res, oauth2Client) => {
   } catch (error) {
     console.error('Error fetching photo details:', error.response ? error.response.data : error.message);
     res.status(500).json({ error: 'Error fetching photo details from Google Photos' });
+  }
+};
+
+
+exports.addTag = async (req, res) => {
+  const { filename } = req.params;
+  const { tag } = req.body;
+
+  try {
+    const photo = await Photo.findOneAndUpdate(
+      { filename },
+      { $addToSet: { customTags: tag } }, // $addToSet prevents duplicates
+      { new: true }
+    );
+    if (!photo) return res.status(404).json({ error: 'Photo not found' });
+    res.json(photo);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to add tag' });
+  }
+};
+
+exports.removeTag = async (req, res) => {
+  const { filename } = req.params;
+  const { tag } = req.body;
+
+  try {
+    const photo = await Photo.findOneAndUpdate(
+      { filename },
+      { $pull: { customTags: tag } }, // $pull removes the tag
+      { new: true }
+    );
+    if (!photo) return res.status(404).json({ error: 'Photo not found' });
+    res.json(photo);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to remove tag' });
   }
 };

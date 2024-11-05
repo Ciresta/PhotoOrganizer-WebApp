@@ -5,7 +5,6 @@ import filterIcon from '../assets/images/filter.svg';
 const FilterButton = ({ onClick }) => {
   return (
     <a
-      href="#"
       onClick={onClick}
       className="ml-4 flex items-center space-x-1 text-gray-700 text-base"
     >

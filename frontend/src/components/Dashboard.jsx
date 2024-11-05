@@ -3,6 +3,8 @@ import axios from 'axios';
 import FilterModal from './DateFilter';
 import ImageViewer from './ImageViewer'; // Import ImageViewer component
 import { format, isToday, isYesterday, parseISO } from 'date-fns';
+import filterIcon from '../assets/images/filter.svg';
+import searchIcon from '../assets/images/search.svg';
 
 const Dashboard = () => {
   const [photos, setPhotos] = useState([]);
@@ -120,7 +122,7 @@ const Dashboard = () => {
       setErrorMessage('No authentication token found. Please log in.');
       return;
     }
-  
+
     try {
       // Fetch photo details along with custom tags
       const response = await axios.get(`http://localhost:5000/photos/${photoId}`, {
@@ -128,9 +130,9 @@ const Dashboard = () => {
           Authorization: `Bearer ${token}`,
         },
       });
-  
+
       const { photoDetails, customTags } = response.data;
-  
+
       // Combine photo details with custom tags for ImageViewer
       const photoWithTags = { ...photoDetails, tags: customTags || [] };
       setSelectedPhoto(photoWithTags); // Set photo with tags for ImageViewer
@@ -139,32 +141,34 @@ const Dashboard = () => {
       setErrorMessage('Failed to load photo details. Please try again.');
     }
   };
-    
+
 
   const groupedPhotos = groupPhotosByDate(photos);
 
   return (
     <div className="p-8">
-      <h1 className="text-5xl font-bold mb-4">
-        <span style={{ color: '#4285F4' }}>G</span>
-        <span style={{ color: '#EA4335' }}>o</span>
-        <span style={{ color: '#FBBC05' }}>o</span>
-        <span style={{ color: '#4285F4' }}>g</span>
-        <span style={{ color: '#34A853' }}>l</span>
-        <span style={{ color: '#EA4335' }}>e</span>&nbsp;
-        <span style={{ background: 'linear-gradient(270deg, #4285F4, #EA4335, #FBBC05, #34A853)', backgroundClip: 'text', color: 'transparent' }}>
-          Photos
-        </span>
-      </h1>
+      <div className='grid grid-cols-2 justify-end items-end'>
+        <h1 className="text-4xl font-semibold mb-4" style={{ fontFamily: 'Roboto, sans-serif', color: '#202124' }}>
+          Welcome to Your Workspace 😄
+        </h1>
+
+        <a
+          onClick={() => setIsModalOpen(true)}
+          className="ml-40 flex space-x-1 cursor-pointer text-gray-700 text-base absolute left-[50rem] top-[25px]"
+        >
+          <img src={filterIcon} alt="Filter" className="w-7 h-7" />
+          <span className="text-base">Filters</span>
+        </a>
+      </div>
 
       {errorMessage && <p className="text-red-500">{errorMessage}</p>}
 
-      <button
+      {/* <button
         onClick={() => setIsModalOpen(true)}
         className="mb-4 px-4 py-2 bg-blue-500 text-white rounded"
       >
         Filter Photos
-      </button>
+      </button> */}
 
       <FilterModal
         isOpen={isModalOpen}
@@ -173,15 +177,16 @@ const Dashboard = () => {
       />
 
       {/* Search Input */}
-      <div className="mb-4">
+      <div className="relative w-[57rem] absolute top-[-140px]">
         <input
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           onKeyPress={handleSearch} // Call search on Enter key
-          placeholder="Search for photos..."
-          className="px-4 py-2 border rounded"
+          placeholder='Search "Food"'
+          className="w-full bg-[#f2f3f8] rounded-full py-2 pl-5 pr-10 focus:outline-none text-gray-500"
         />
+        <img src={searchIcon} alt="Search" className="absolute right-4 top-2 w-4 h-4" />
       </div>
 
       {isLoading && <p className="mt-4 text-blue-500">Loading...</p>} {/* Loader */}

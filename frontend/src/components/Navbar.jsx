@@ -4,10 +4,10 @@ import homeIcon from '../assets/images/home.svg';
 import uploadIcon from '../assets/images/upload.svg';
 import slideshowIcon from '../assets/images/slideshow.svg';
 import signinIcon from '../assets/images/signuser.svg';
-import searchIcon from '../assets/images/search.svg';
-import FilterButton from './FilterButton'; // Import the new FilterButton component
+// import searchIcon from '../assets/images/search.svg';
+// import FilterButton from './FilterButton'; // Import the new FilterButton component
 import userProfileIcon from '../assets/images/signuser.svg';
-import Filter from './FilterButton'; 
+// import Filter from './FilterButton'; 
 
 const Navbar = ({ isAuthenticated, onLogout, user }) => {
   const [dropdownVisible, setDropdownVisible] = useState(false);
@@ -25,20 +25,20 @@ const Navbar = ({ isAuthenticated, onLogout, user }) => {
   return (
     <div className="w-full flex justify-between items-center mt-4">
       <div className="flex ml-10 items-center w-full max-w-4xl">
-        <div className="relative w-full">
+        {/* <div className="relative w-full">
           <input
             type="text"
             placeholder='Search "Food"'
             className="w-full bg-[#f2f3f8] rounded-full py-2 pl-5 pr-10 focus:outline-none text-gray-500"
           />
           <img src={searchIcon} alt="Search" className="absolute right-4 top-2 w-4 h-4" />
-        </div>
+        </div> */}
 
-        {isAuthenticated && (
+        {/* {isAuthenticated && (
           <FilterButton 
             onClick={() => setFilterModalVisible(true)} // Open the filter modal on click
           />
-        )}
+        )} */}
       </div>
 
       <div className="flex items-center mr-10 bg-[#F0F0FC] py-2 px-6 rounded-full space-x-8">
@@ -52,7 +52,7 @@ const Navbar = ({ isAuthenticated, onLogout, user }) => {
           <span className="text-base">Upload</span>
         </Link>
 
-        <a href="#" className="flex items-center space-x-1 text-gray-700 text-base">
+        <a href="#slideshow" className="flex items-center space-x-1 text-gray-700 text-base">
           <img src={slideshowIcon} alt="Slideshow" className="w-5 h-5" />
           <span className="text-base">Slideshow</span>
         </a>
@@ -84,7 +84,7 @@ const Navbar = ({ isAuthenticated, onLogout, user }) => {
             )}
           </div>
         ) : (
-          <a href="#" className="flex items-center space-x-1 text-gray-700 text-base">
+          <a href="#signin" className="flex items-center space-x-1 text-gray-700 text-base">
             <img src={signinIcon} alt="Sign-in" className="w-7 h-7" />
             <span className="text-base">Sign-in</span>
           </a>

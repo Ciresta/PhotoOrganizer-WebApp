@@ -49,6 +49,10 @@ app.post('/searchPhotos', refreshTokenMiddleware, (req, res) => {
 app.get('/photos/:photoId',refreshTokenMiddleware, (req, res) => {
   uploadController.getPhotoDetailsWithTags(req, res, oauth2Client);
 });
+
+app.post('/:filename/tags', refreshTokenMiddleware, (req, res) => {
+  uploadController.addTag(req, res, oauth2Client);
+});
 // app.get('/photos/:photoId',refreshTokenMiddleware, (req, res) => {
 //   uploadController.getPhotoDetails(req, res, oauth2Client);
 // });
