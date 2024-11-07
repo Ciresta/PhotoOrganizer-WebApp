@@ -124,7 +124,7 @@ const Dashboard = () => {
     }
 
     try {
-      // Fetch photo details along with custom tags
+      // Fetch photo details along with custom tags using Google Photo ID directly
       const response = await axios.get(`http://localhost:5000/photos/${photoId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -142,6 +142,13 @@ const Dashboard = () => {
     }
   };
 
+  axios.get('http://localhost:5000/sync', { withCredentials: true })
+    .then(response => {
+      console.log(response.data.message);
+    })
+    .catch(error => {
+      console.error('Error during sync:', error);
+    });
 
   const groupedPhotos = groupPhotosByDate(photos);
 

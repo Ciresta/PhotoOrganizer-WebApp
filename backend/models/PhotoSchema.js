@@ -3,7 +3,8 @@ const mongoose = require('mongoose');
 
 const photoSchema = new mongoose.Schema({
   filename: { type: String, required: true },
-  size: { type: Number, required: true },
+  googlePhotoId: { type: String, required: true }, // Add Google Photos ID field
+  size: { type: Number, required: true, default: 0 },
   type: { type: String, required: true },
   uploadedAt: { type: Date, default: Date.now },
   customTags: { type: [String], default: [] },

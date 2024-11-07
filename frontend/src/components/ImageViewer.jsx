@@ -9,20 +9,14 @@ const ImageViewer = ({ photo, onClose }) => {
 
   if (!photo) return null;
 
-  const extractFilename = (description) => {
-    const parts = description.split('-');
-    return parts[parts.length - 1].trim(); // Extracts filename from description
-  };
-
   const handleTagRemove = async (tag) => {
-    const filename = extractFilename(photo.description);
     console.log(`Removing tag: ${tag}`);
 
     try {
       const response = await axios.delete('http://localhost:5000/deletetags', {
         data: {  // Using data for DELETE request body
           tagName: tag,
-          filename,
+          googlePhotoId: photo.id, // Pass googlePhotoId directly
         },
       });
 
@@ -35,12 +29,10 @@ const ImageViewer = ({ photo, onClose }) => {
   };
 
   const handleAddTag = async () => {
-    const filename = extractFilename(photo.description);
-
     try {
       const response = await axios.post('http://localhost:5000/addtags', {
         tagName: newTag,
-        filename,
+        googlePhotoId: photo.id, // Pass googlePhotoId directly
       });
 
       if (response.status === 200) {

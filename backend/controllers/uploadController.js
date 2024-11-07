@@ -4,6 +4,93 @@ const { VisionServiceClient } = require('@google-cloud/vision');
 const Photo = require('../models/PhotoSchema'); // Import the Photo model
 const { OAuth2Client } = require('google-auth-library');
 
+// exports.uploadPhotos = async (req, res, oauth2Client) => {
+//   const files = req.files;
+//   const customTags = JSON.parse(req.body.customTags || '[]');
+
+//   if (!oauth2Client.credentials.access_token) {
+//     return res.status(401).send('Unauthorized: No access token provided');
+//   }
+
+//   try {
+//     const uploadResults = [];
+
+//     if (files.length !== customTags.length) {
+//       return res.status(400).send('Error: Each file must have a corresponding array of tags.');
+//     }
+
+//     for (let i = 0; i < files.length; i++) {
+//       const file = files[i];
+//       const filePath = file.path;
+//       const tagsForCurrentFile = Array.isArray(customTags[i]) ? customTags[i] : [customTags[i]];
+
+//       const stats = fs.statSync(filePath);
+//       const fileMetadata = {
+//         filename: file.originalname, // Ensure the filename is the original name
+//         size: stats.size,
+//         type: file.mimetype,
+//         uploadedAt: new Date(),
+//         customTags: tagsForCurrentFile,
+//       };
+
+//       console.log('File Metadata:', fileMetadata);
+
+//       const uploadUrl = 'https://photoslibrary.googleapis.com/v1/uploads';
+//       const headers = {
+//         Authorization: `Bearer ${oauth2Client.credentials.access_token}`,
+//         'Content-Type': 'application/octet-stream',
+//         'X-Goog-Upload-Protocol': 'raw',
+//       };
+
+//       const fileData = fs.readFileSync(filePath);
+//       const uploadResponse = await axios.post(uploadUrl, fileData, { headers });
+//       const uploadToken = uploadResponse.data;
+
+//       const createMediaItemUrl = 'https://photoslibrary.googleapis.com/v1/mediaItems:batchCreate';
+//       const mediaItemRequest = {
+//         newMediaItems: [
+//           {
+//             description: `Uploaded via PhotoTaggerApp - ${file.originalname}`, // Setting description
+//             simpleMediaItem: {
+//               uploadToken: uploadToken,
+//             },
+//           },
+//         ],
+//       };
+
+//       await axios.post(createMediaItemUrl, mediaItemRequest, { headers });
+
+//       try {
+//         const photoDocument = new Photo(fileMetadata);
+//         await photoDocument.save();
+
+//         uploadResults.push({
+//           filename: file.originalname,
+//           status: 'Uploaded and saved successfully',
+//           customTags: fileMetadata.customTags,
+//         });
+//         console.log(`Saved metadata for ${file.originalname} to MongoDB`);
+//       } catch (dbError) {
+//         console.error(`Error saving ${file.originalname} metadata to MongoDB:`, dbError.message);
+//         uploadResults.push({
+//           filename: file.originalname,
+//           status: `Upload successful but failed to save metadata: ${dbError.message}`,
+//           customTags: fileMetadata.customTags,
+//         });
+//       }
+
+//       fs.unlinkSync(filePath); // Clean up file from local storage after upload
+//     }
+
+//     res.status(200).json({ message: 'Photos processed successfully', results: uploadResults });
+//   } catch (error) {
+//     console.error('Error uploading photos:', error);
+//     res.status(500).send('Error uploading photos: ' + error.message);
+//   }
+// };
+
+// ---------------new one with photo id------------------
+
 exports.uploadPhotos = async (req, res, oauth2Client) => {
   const files = req.files;
   const customTags = JSON.parse(req.body.customTags || '[]');
@@ -26,7 +113,7 @@ exports.uploadPhotos = async (req, res, oauth2Client) => {
 
       const stats = fs.statSync(filePath);
       const fileMetadata = {
-        filename: file.originalname, // Ensure the filename is the original name
+        filename: file.originalname,
         size: stats.size,
         type: file.mimetype,
         uploadedAt: new Date(),
@@ -50,7 +137,7 @@ exports.uploadPhotos = async (req, res, oauth2Client) => {
       const mediaItemRequest = {
         newMediaItems: [
           {
-            description: `Uploaded via PhotoTaggerApp - ${file.originalname}`, // Setting description
+            description: `Uploaded via PhotoTaggerApp - ${file.originalname}`,
             simpleMediaItem: {
               uploadToken: uploadToken,
             },
@@ -58,7 +145,21 @@ exports.uploadPhotos = async (req, res, oauth2Client) => {
         ],
       };
 
-      await axios.post(createMediaItemUrl, mediaItemRequest, { headers });
+      const createResponse = await axios.post(createMediaItemUrl, mediaItemRequest, { headers });
+      const mediaItem = createResponse.data?.newMediaItemResults[0]?.mediaItem;
+
+      if (!mediaItem || !mediaItem.id) {
+        console.error(`Failed to retrieve mediaItem ID for ${file.originalname}`);
+        uploadResults.push({
+          filename: file.originalname,
+          status: 'Upload successful but failed to retrieve Google Photos ID',
+          customTags: fileMetadata.customTags,
+        });
+        continue;
+      }
+
+      // Add Google Photos ID to file metadata
+      fileMetadata.googlePhotoId = mediaItem.id;
 
       try {
         const photoDocument = new Photo(fileMetadata);
@@ -67,6 +168,7 @@ exports.uploadPhotos = async (req, res, oauth2Client) => {
         uploadResults.push({
           filename: file.originalname,
           status: 'Uploaded and saved successfully',
+          googlePhotoId: mediaItem.id,
           customTags: fileMetadata.customTags,
         });
         console.log(`Saved metadata for ${file.originalname} to MongoDB`);
@@ -88,7 +190,6 @@ exports.uploadPhotos = async (req, res, oauth2Client) => {
     res.status(500).send('Error uploading photos: ' + error.message);
   }
 };
-
 
 
 
@@ -359,8 +460,68 @@ exports.searchPhotos = async (req, res, oauth2Client) => {
 // };
 
 
+// exports.getPhotoDetailsWithTags = async (req, res, oauth2Client) => {
+//   const { photoId } = req.params;
+//   console.log("PHOTO ID:", photoId);
+
+//   if (!oauth2Client.credentials.access_token) {
+//     return res.status(401).json({ error: 'Unauthorized: No access token provided' });
+//   }
+
+//   try {
+//     // Step 1: Fetch the photo details from Google Photos
+//     const photoDetailsUrl = `https://photoslibrary.googleapis.com/v1/mediaItems/${photoId}`;
+//     const headers = {
+//       Authorization: `Bearer ${oauth2Client.credentials.access_token}`,
+//     };
+
+//     const response = await axios.get(photoDetailsUrl, { headers });
+//     const photoData = response.data;
+
+//     // Step 2: Extract filename from the description
+//     const filename = photoData.description ? photoData.description.split(' - ')[1] : null;
+//     if (!filename) {
+//       console.error('Filename not found in description');
+//       return res.status(200).json({
+//         photoDetails: {
+//           id: photoData.id,
+//           url: photoData.baseUrl,
+//           filename: photoData.filename,
+//           description: photoData.description || 'No description',
+//           creationTime: photoData.mediaMetadata.creationTime,
+//           width: photoData.mediaMetadata.width,
+//           height: photoData.mediaMetadata.height,
+//           mimeType: photoData.mimeType,
+//         },
+//         customTags: [] // No tags if filename extraction fails
+//       });
+//     }
+
+//     // Step 3: Fetch custom tags based on the filename
+//     const photoRecord = await Photo.findOne({ filename });
+//     const customTags = photoRecord ? photoRecord.customTags : [];
+
+//     // Step 4: Combine photo details with custom tags and send response
+//     const photoDetails = {
+//       id: photoData.id,
+//       url: photoData.baseUrl,
+//       filename: photoData.filename,
+//       description: photoData.description || 'No description',
+//       creationTime: photoData.mediaMetadata.creationTime,
+//       width: photoData.mediaMetadata.width,
+//       height: photoData.mediaMetadata.height,
+//       mimeType: photoData.mimeType,
+//     };
+
+//     res.status(200).json({ photoDetails, customTags });
+//   } catch (error) {
+//     console.error('Error fetching photo details:', error.response ? error.response.data : error.message);
+//     res.status(500).json({ error: 'Error fetching photo details from Google Photos' });
+//   }
+// };
+
 exports.getPhotoDetailsWithTags = async (req, res, oauth2Client) => {
-  const { photoId } = req.params;
+  const { photoId } = req.params; // `photoId` is the Google Photos ID
   console.log("PHOTO ID:", photoId);
 
   if (!oauth2Client.credentials.access_token) {
@@ -368,7 +529,7 @@ exports.getPhotoDetailsWithTags = async (req, res, oauth2Client) => {
   }
 
   try {
-    // Step 1: Fetch the photo details from Google Photos
+    // Step 1: Fetch the photo details from Google Photos using `photoId`
     const photoDetailsUrl = `https://photoslibrary.googleapis.com/v1/mediaItems/${photoId}`;
     const headers = {
       Authorization: `Bearer ${oauth2Client.credentials.access_token}`,
@@ -377,30 +538,11 @@ exports.getPhotoDetailsWithTags = async (req, res, oauth2Client) => {
     const response = await axios.get(photoDetailsUrl, { headers });
     const photoData = response.data;
 
-    // Step 2: Extract filename from the description
-    const filename = photoData.description ? photoData.description.split(' - ')[1] : null;
-    if (!filename) {
-      console.error('Filename not found in description');
-      return res.status(200).json({
-        photoDetails: {
-          id: photoData.id,
-          url: photoData.baseUrl,
-          filename: photoData.filename,
-          description: photoData.description || 'No description',
-          creationTime: photoData.mediaMetadata.creationTime,
-          width: photoData.mediaMetadata.width,
-          height: photoData.mediaMetadata.height,
-          mimeType: photoData.mimeType,
-        },
-        customTags: [] // No tags if filename extraction fails
-      });
-    }
-
-    // Step 3: Fetch custom tags based on the filename
-    const photoRecord = await Photo.findOne({ filename });
+    // Step 2: Fetch custom tags from MongoDB based on `googlePhotoId`
+    const photoRecord = await Photo.findOne({ googlePhotoId: photoId });
     const customTags = photoRecord ? photoRecord.customTags : [];
 
-    // Step 4: Combine photo details with custom tags and send response
+    // Step 3: Combine photo details with custom tags and send response
     const photoDetails = {
       id: photoData.id,
       url: photoData.baseUrl,
@@ -420,11 +562,11 @@ exports.getPhotoDetailsWithTags = async (req, res, oauth2Client) => {
 };
 
 exports.addCustomTags = async (req, res) => {
-  const { tagName, filename } = req.body;
+  const { tagName, googlePhotoId } = req.body;
 
   try {
     const photo = await Photo.findOneAndUpdate(
-      { filename },
+      { googlePhotoId },
       { $addToSet: { customTags: tagName } },
       { new: true }
     );
@@ -441,11 +583,11 @@ exports.addCustomTags = async (req, res) => {
 };
 
 exports.deleteCustomTags = async (req, res) => {
-  const { tagName, filename } = req.body;
+  const { tagName, googlePhotoId } = req.body;
 
   try {
     const photo = await Photo.findOneAndUpdate(
-      { filename },
+      { googlePhotoId },
       { $pull: { customTags: tagName } },
       { new: true }
     );
@@ -458,5 +600,47 @@ exports.deleteCustomTags = async (req, res) => {
   } catch (error) {
     console.error('Error deleting custom tag:', error);
     res.status(500).json({ message: 'Failed to delete custom tag' });
+  }
+};
+
+exports.syncGooglePhotos = async (req, res, oauth2Client) => {
+  try {
+    // Fetch photos from Google Photos
+    const photos = await getPhotosFromGoogle(oauth2Client);
+
+    if (!photos || photos.length === 0) {
+      console.log('No photos found');
+      return res.status(404).json({ message: 'No photos found in your Google account' });
+    }
+
+    console.log('Fetched photos:', photos);  // Log the fetched photos
+
+    // Map and save details to database
+    const photoDetails = photos.map(photo => ({
+      filename: photo.filename || 'unknown',
+      url: photo.url || '',
+      creationTime: photo.creationTime || new Date(),
+      width: photo.width || 0,
+      height: photo.height || 0,
+      size: photo.size || 0,
+      mimeType: photo.mimeType || 'unknown',
+      customTags: [],
+      location: photo.location || 'Unknown'
+    }));
+
+    for (const details of photoDetails) {
+      await Photo.findOneAndUpdate(
+        { filename: details.filename },
+        details,
+        { upsert: true, new: true }
+      );
+    }
+
+    res.status(200).json({ message: 'Google Photos sync completed successfully' });
+  } catch (error) {
+    console.error('Error syncing Google Photos:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ message: 'Error syncing Google Photos', error });
+    }
   }
 };
