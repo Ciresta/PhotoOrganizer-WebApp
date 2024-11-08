@@ -62,10 +62,6 @@ app.delete('/deletetags', refreshTokenMiddleware, (req, res) => {
   uploadController.deleteCustomTags(req, res, oauthController.oauth2Client);
 });
 
-app.get('/sync', refreshTokenMiddleware, (req, res) => {
-  console.log('Sync route hit');
-  uploadController.syncGooglePhotos(req, res, oauthController.oauth2Client);
-});
 
 // app.get('/photos/:photoId',refreshTokenMiddleware, (req, res) => {
 //   uploadController.getPhotoDetails(req, res, oauth2Client);

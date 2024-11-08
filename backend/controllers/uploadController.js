@@ -191,9 +191,6 @@ exports.uploadPhotos = async (req, res, oauth2Client) => {
   }
 };
 
-
-
-
 exports.getGooglePhotos = async (req, res, oauth2Client) => {
   if (!oauth2Client.credentials.access_token) {
     return res.status(401).send('Unauthorized: No access token provided');
@@ -203,12 +200,9 @@ exports.getGooglePhotos = async (req, res, oauth2Client) => {
 
   try {
     const photosUrl = 'https://photoslibrary.googleapis.com/v1/mediaItems:search';
-    const headers = {
-      Authorization: `Bearer ${oauth2Client.credentials.access_token}`,
-    };
+    const headers = { Authorization: `Bearer ${oauth2Client.credentials.access_token}` };
 
     let filters = {};
-
     if (fromDate && toDate) {
       filters.dateFilter = {
         ranges: [
@@ -228,33 +222,124 @@ exports.getGooglePhotos = async (req, res, oauth2Client) => {
       };
     }
 
-    const response = await axios.post(
-      photosUrl,
-      { filters },
-      { headers }
-    );
-
+    const response = await axios.post(photosUrl, { filters }, { headers });
     const photos = response.data.mediaItems || [];
 
-    const filteredPhotos = location
-      ? photos.filter(photo => {
-          return photo.location && photo.location.includes(location);
-        })
-      : photos;
+    // Filter and prepare photo details
+    const filteredPhotos = photos
+      .filter(photo => photo.mediaMetadata?.creationTime)
+      .filter(photo => !location || (photo.location && photo.location.includes(location)));
 
-    const photoDetails = filteredPhotos.map((photo) => ({
-      id: photo.id,
-      url: photo.baseUrl,
-      filename: photo.filename,
-      creationTime: photo.mediaMetadata.creationTime || null, 
+    const photoDetails = await Promise.all(filteredPhotos.map(async (photo) => {
+      try {
+        // Check if photo already exists in the database
+        const existingPhoto = await Photo.findOne({ googlePhotoId: photo.id });
+
+        if (!existingPhoto) {
+          // If photo does not exist, save it
+          const newPhoto = new Photo({
+            googlePhotoId: photo.id,
+            filename: photo.filename,
+            url: photo.baseUrl,
+            size: parseInt(photo.mediaMetadata?.sizeBytes || 0, 10),
+            type: photo.mimeType,
+            customTags: [], // Initialize empty tags
+            description: 'Uploaded via PhotoTaggerApp',
+            status: 'Uploaded',
+          });
+
+          await newPhoto.save();
+        }
+
+        // Return photo details, regardless of whether it was new or already in the database
+        return {
+          id: photo.id,
+          filename: photo.filename,
+          url: photo.baseUrl,
+          size: parseInt(photo.mediaMetadata?.sizeBytes || 0, 10),
+          type: photo.mimeType,
+          creationTime: photo.mediaMetadata.creationTime,
+        };
+
+      } catch (error) {
+        if (error.code === 11000) {
+          // Duplicate key error, photo already exists in DB, just skip saving
+          console.log(`Photo with ID ${photo.id} already exists in the database.`);
+        } else {
+          console.error('Error while saving photo:', error);
+        }
+      }
     }));
 
-    res.status(200).json(photoDetails);
+    res.json(photoDetails);
   } catch (error) {
-    console.error('Error fetching Google Photos:', error);
-    res.status(500).send('Error fetching photos from Google Photos');
+    console.error('Error fetching photos:', error);
+    res.status(500).json({ error: 'Failed to fetch photos from Google Photos API' });
   }
 };
+
+
+// exports.getGooglePhotos = async (req, res, oauth2Client) => {
+//   if (!oauth2Client.credentials.access_token) {
+//     return res.status(401).send('Unauthorized: No access token provided');
+//   }
+
+//   const { fromDate, toDate, location } = req.query;
+
+//   try {
+//     const photosUrl = 'https://photoslibrary.googleapis.com/v1/mediaItems:search';
+//     const headers = {
+//       Authorization: `Bearer ${oauth2Client.credentials.access_token}`,
+//     };
+
+//     let filters = {};
+
+//     if (fromDate && toDate) {
+//       filters.dateFilter = {
+//         ranges: [
+//           {
+//             startDate: {
+//               year: parseInt(fromDate.split('-')[0]),
+//               month: parseInt(fromDate.split('-')[1]),
+//               day: parseInt(fromDate.split('-')[2]),
+//             },
+//             endDate: {
+//               year: parseInt(toDate.split('-')[0]),
+//               month: parseInt(toDate.split('-')[1]),
+//               day: parseInt(toDate.split('-')[2]),
+//             },
+//           },
+//         ],
+//       };
+//     }
+
+//     const response = await axios.post(
+//       photosUrl,
+//       { filters },
+//       { headers }
+//     );
+
+//     const photos = response.data.mediaItems || [];
+
+//     const filteredPhotos = location
+//       ? photos.filter(photo => {
+//           return photo.location && photo.location.includes(location);
+//         })
+//       : photos;
+
+//     const photoDetails = filteredPhotos.map((photo) => ({
+//       id: photo.id,
+//       url: photo.baseUrl,
+//       filename: photo.filename,
+//       creationTime: photo.mediaMetadata.creationTime || null, 
+//     }));
+
+//     res.status(200).json(photoDetails);
+//   } catch (error) {
+//     console.error('Error fetching Google Photos:', error);
+//     res.status(500).send('Error fetching photos from Google Photos');
+//   }
+// };
 
 exports.getUserProfile = async (req, res, oauth2Client) => {
   if (!oauth2Client.credentials.access_token) {
@@ -324,7 +409,6 @@ exports.searchPhotoswithvision = async (req, res) => {
     res.status(500).send('Error searching photos');
   }
 };
-
 exports.searchPhotos = async (req, res, oauth2Client) => {
   const { searchTerm } = req.body;
   console.log('Received search term:', searchTerm);
@@ -338,7 +422,7 @@ exports.searchPhotos = async (req, res, oauth2Client) => {
     const matchedPhotos = await Photo.find({
       $or: [
         { filename: { $regex: searchTerm, $options: 'i' } },
-        { customTags: { $regex: searchTerm, $options: 'i' } }
+        { customTags: { $elemMatch: { $regex: searchTerm, $options: 'i' } } }
       ]
     });
 
@@ -395,6 +479,7 @@ exports.searchPhotos = async (req, res, oauth2Client) => {
     res.status(500).json({ error: 'Error fetching photos from Google Photos' });
   }
 };
+
 
 // exports.getPhotoDetails = async (req, res, oauth2Client) => {
 //   const { photoId } = req.params;
@@ -603,44 +688,44 @@ exports.deleteCustomTags = async (req, res) => {
   }
 };
 
-exports.syncGooglePhotos = async (req, res, oauth2Client) => {
-  try {
-    // Fetch photos from Google Photos
-    const photos = await getPhotosFromGoogle(oauth2Client);
+// exports.syncGooglePhotos = async (req, res, oauth2Client) => {
+//   try {
+//     // Fetch photos from Google Photos
+//     const photos = await getPhotosFromGoogle(oauth2Client);
 
-    if (!photos || photos.length === 0) {
-      console.log('No photos found');
-      return res.status(404).json({ message: 'No photos found in your Google account' });
-    }
+//     if (!photos || photos.length === 0) {
+//       console.log('No photos found');
+//       return res.status(404).json({ message: 'No photos found in your Google account' });
+//     }
 
-    console.log('Fetched photos:', photos);  // Log the fetched photos
+//     console.log('Fetched photos:', photos);  // Log the fetched photos
 
-    // Map and save details to database
-    const photoDetails = photos.map(photo => ({
-      filename: photo.filename || 'unknown',
-      url: photo.url || '',
-      creationTime: photo.creationTime || new Date(),
-      width: photo.width || 0,
-      height: photo.height || 0,
-      size: photo.size || 0,
-      mimeType: photo.mimeType || 'unknown',
-      customTags: [],
-      location: photo.location || 'Unknown'
-    }));
+//     // Map and save details to database
+//     const photoDetails = photos.map(photo => ({
+//       filename: photo.filename || 'unknown',
+//       url: photo.url || '',
+//       creationTime: photo.creationTime || new Date(),
+//       width: photo.width || 0,
+//       height: photo.height || 0,
+//       size: photo.size || 0,
+//       mimeType: photo.mimeType || 'unknown',
+//       customTags: [],
+//       location: photo.location || 'Unknown'
+//     }));
 
-    for (const details of photoDetails) {
-      await Photo.findOneAndUpdate(
-        { filename: details.filename },
-        details,
-        { upsert: true, new: true }
-      );
-    }
+//     for (const details of photoDetails) {
+//       await Photo.findOneAndUpdate(
+//         { filename: details.filename },
+//         details,
+//         { upsert: true, new: true }
+//       );
+//     }
 
-    res.status(200).json({ message: 'Google Photos sync completed successfully' });
-  } catch (error) {
-    console.error('Error syncing Google Photos:', error);
-    if (!res.headersSent) {
-      res.status(500).json({ message: 'Error syncing Google Photos', error });
-    }
-  }
-};
+//     res.status(200).json({ message: 'Google Photos sync completed successfully' });
+//   } catch (error) {
+//     console.error('Error syncing Google Photos:', error);
+//     if (!res.headersSent) {
+//       res.status(500).json({ message: 'Error syncing Google Photos', error });
+//     }
+//   }
+// };

@@ -55,27 +55,26 @@ const Dashboard = () => {
 
 
 
-  // Group photos by date
   const groupPhotosByDate = (photos) => {
     const grouped = {};
     photos.forEach(photo => {
-      if (!photo.creationTime) {
-        console.error('Missing creationTime for photo:', photo);
+      // Check for creationTime
+      const photoDate = photo.creationTime ? parseISO(photo.creationTime) : null;
+      if (!photoDate || isNaN(photoDate)) {
+        console.error('Missing or invalid creationTime for photo:', photo);
         return;
       }
-
-      const photoDate = parseISO(photo.creationTime);
-      if (isNaN(photoDate)) return;
-
+  
       const dateKey = format(photoDate, 'yyyy-MM-dd');
       if (!grouped[dateKey]) {
         grouped[dateKey] = [];
       }
       grouped[dateKey].push(photo);
     });
-
+  
     return grouped;
   };
+  
 
   // Format date header
   const formatDateHeader = (dateString) => {
@@ -141,14 +140,6 @@ const Dashboard = () => {
       setErrorMessage('Failed to load photo details. Please try again.');
     }
   };
-
-  axios.get('http://localhost:5000/sync', { withCredentials: true })
-    .then(response => {
-      console.log(response.data.message);
-    })
-    .catch(error => {
-      console.error('Error during sync:', error);
-    });
 
   const groupedPhotos = groupPhotosByDate(photos);
 
