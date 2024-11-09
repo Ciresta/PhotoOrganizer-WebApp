@@ -378,37 +378,6 @@ const { ImageAnnotatorClient } = require('@google-cloud/vision'); // Ensure this
 const path = require('path');
 
 // Your existing code...
-exports.searchPhotoswithvision = async (req, res) => {
-  console.log("Search Photos Request Received", req.body); // Log the incoming request
-  const { searchTerm, photos } = req.body;
-
-  if (!searchTerm || !photos || photos.length === 0) {
-    return res.status(400).send('Search term and photos are required.');
-  }
-
-  try {
-    const client = new ImageAnnotatorClient({
-      keyFilename: path.join(__dirname, 'sigma-archery-437616-m1-b0567f5f6e5c.json'), // Adjust the path if necessary
-    });
-
-    const matchingPhotos = [];
-
-    for (const photo of photos) {
-      console.log(`Analyzing photo: ${photo.url}`); // Log each photo being analyzed
-      const [result] = await client.labelDetection(photo.url); // Call Vision API for label detection
-      const labels = result.labelAnnotations.map(label => label.description.toLowerCase());
-
-      if (labels.includes(searchTerm.toLowerCase())) {
-        matchingPhotos.push(photo); // If the label matches the search term, add the photo
-      }
-    }
-
-    res.status(200).json(matchingPhotos); // Return matching photos
-  } catch (error) {
-    console.error('Error searching photos:', error);
-    res.status(500).send('Error searching photos');
-  }
-};
 exports.searchPhotos = async (req, res, oauth2Client) => {
   const { searchTerm } = req.body;
   console.log('Received search term:', searchTerm);
@@ -428,13 +397,13 @@ exports.searchPhotos = async (req, res, oauth2Client) => {
 
     console.log('Matched photos from MongoDB:', matchedPhotos);
 
-    // Get filenames from the matched MongoDB records
-    const matchedFilenames = matchedPhotos.map(photo => photo.filename);
-    if (matchedFilenames.length === 0) {
+    // Get Google Photo IDs from matched MongoDB records
+    const matchedGooglePhotoIds = matchedPhotos.map(photo => photo.googlePhotoId);
+    if (matchedGooglePhotoIds.length === 0) {
       return res.status(200).json([]); // No matches found
     }
 
-    // Step 2: Retrieve images from Google Photos API and filter by description
+    // Step 2: Retrieve images from Google Photos API and filter by googlePhotoId
     const photosUrl = 'https://photoslibrary.googleapis.com/v1/mediaItems:search';
     const headers = {
       Authorization: `Bearer ${oauth2Client.credentials.access_token}`,
@@ -451,12 +420,10 @@ exports.searchPhotos = async (req, res, oauth2Client) => {
         { headers }
       );
 
-      console.log('Google Photos API response:', response.data);
-
-      // Filter photos returned by Google Photos to match filenames in descriptions
+      // Filter photos returned by Google Photos to match googlePhotoId from MongoDB
       const photos = response.data.mediaItems || [];
       const matchedGooglePhotos = photos.filter(photo => 
-        matchedFilenames.some(filename => photo.description?.includes(filename))
+        matchedGooglePhotoIds.includes(photo.id)
       );
 
       googlePhotos.push(...matchedGooglePhotos);
@@ -464,13 +431,16 @@ exports.searchPhotos = async (req, res, oauth2Client) => {
       console.error('Error fetching photos from Google Photos:', photoError);
     }
 
-    // Step 3: Format response data
-    const photoDetails = googlePhotos.map((photo) => ({
-      url: `${photo.baseUrl}=w500-h500`, // Resize as needed
-      filename: photo.filename,
-      creationTime: photo.mediaMetadata?.creationTime || null,
-      description: photo.description || 'No description',
-    }));
+    // Step 3: Format response data by combining Google Photos with database details
+    const photoDetails = googlePhotos.map((photo) => {
+      const dbRecord = matchedPhotos.find(item => item.googlePhotoId === photo.id);
+      return {
+        url: `${photo.baseUrl}=w500-h500`, // Resize as needed
+        filename: photo.filename,
+        creationTime: photo.mediaMetadata?.creationTime || null,
+        customTags: dbRecord?.customTags || [],
+      };
+    });
 
     // Send formatted data back to client
     res.status(200).json(photoDetails);

@@ -96,7 +96,6 @@ const Dashboard = () => {
           return;
         }
 
-        // Call the backend searchPhotos endpoint
         const response = await axios.post('http://localhost:5000/searchPhotos', {
           searchTerm,
         }, {
