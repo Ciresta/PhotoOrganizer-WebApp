@@ -222,56 +222,68 @@ exports.getGooglePhotos = async (req, res, oauth2Client) => {
       };
     }
 
-    const response = await axios.post(photosUrl, { filters }, { headers });
-    const photos = response.data.mediaItems || [];
+    let allPhotos = [];
+    let pageToken = null;
 
-    // Filter and prepare photo details
-    const filteredPhotos = photos
-      .filter(photo => photo.mediaMetadata?.creationTime)
-      .filter(photo => !location || (photo.location && photo.location.includes(location)));
+    // Loop to fetch all pages
+    do {
+      const response = await axios.post(
+        photosUrl,
+        { filters, pageToken, pageSize: 100 }, // Increase pageSize to max (100)
+        { headers }
+      );
 
-    const photoDetails = await Promise.all(filteredPhotos.map(async (photo) => {
-      try {
-        // Check if photo already exists in the database
-        const existingPhoto = await Photo.findOne({ googlePhotoId: photo.id });
+      const photos = response.data.mediaItems || [];
+      pageToken = response.data.nextPageToken || null;
 
-        if (!existingPhoto) {
-          // If photo does not exist, save it
-          const newPhoto = new Photo({
-            googlePhotoId: photo.id,
+      const filteredPhotos = photos
+        .filter(photo => photo.mediaMetadata?.creationTime)
+        .filter(photo => !location || (photo.location && photo.location.includes(location)));
+
+      // Save photo details to the database and prepare response data
+      const photoDetails = await Promise.all(filteredPhotos.map(async (photo) => {
+        try {
+          // Check if photo already exists in the database
+          const existingPhoto = await Photo.findOne({ googlePhotoId: photo.id });
+
+          if (!existingPhoto) {
+            // Save new photo to the database
+            const newPhoto = new Photo({
+              googlePhotoId: photo.id,
+              filename: photo.filename,
+              url: photo.baseUrl,
+              size: parseInt(photo.mediaMetadata?.sizeBytes || 0, 10),
+              type: photo.mimeType,
+              customTags: [],
+              description: 'Uploaded via PhotoTaggerApp',
+              status: 'Uploaded',
+            });
+            await newPhoto.save();
+          }
+
+          // Return photo details, whether new or existing
+          return {
+            id: photo.id,
             filename: photo.filename,
             url: photo.baseUrl,
             size: parseInt(photo.mediaMetadata?.sizeBytes || 0, 10),
             type: photo.mimeType,
-            customTags: [], // Initialize empty tags
-            description: 'Uploaded via PhotoTaggerApp',
-            status: 'Uploaded',
-          });
-
-          await newPhoto.save();
+            creationTime: photo.mediaMetadata.creationTime,
+          };
+        } catch (error) {
+          if (error.code === 11000) {
+            console.log(`Photo with ID ${photo.id} already exists in the database.`);
+          } else {
+            console.error('Error while saving photo:', error);
+          }
         }
+      }));
 
-        // Return photo details, regardless of whether it was new or already in the database
-        return {
-          id: photo.id,
-          filename: photo.filename,
-          url: photo.baseUrl,
-          size: parseInt(photo.mediaMetadata?.sizeBytes || 0, 10),
-          type: photo.mimeType,
-          creationTime: photo.mediaMetadata.creationTime,
-        };
+      allPhotos = allPhotos.concat(photoDetails.filter(photo => photo != null));
 
-      } catch (error) {
-        if (error.code === 11000) {
-          // Duplicate key error, photo already exists in DB, just skip saving
-          console.log(`Photo with ID ${photo.id} already exists in the database.`);
-        } else {
-          console.error('Error while saving photo:', error);
-        }
-      }
-    }));
+    } while (pageToken);
 
-    res.json(photoDetails);
+    res.json(allPhotos);
   } catch (error) {
     console.error('Error fetching photos:', error);
     res.status(500).json({ error: 'Failed to fetch photos from Google Photos API' });
@@ -373,11 +385,6 @@ exports.getUserProfile = async (req, res, oauth2Client) => {
   }
 };
 
-// Import the ImageAnnotatorClient from the Vision API
-const { ImageAnnotatorClient } = require('@google-cloud/vision'); // Ensure this is added
-const path = require('path');
-
-// Your existing code...
 exports.searchPhotos = async (req, res, oauth2Client) => {
   const { searchTerm } = req.body;
   console.log('Received search term:', searchTerm);
@@ -387,7 +394,7 @@ exports.searchPhotos = async (req, res, oauth2Client) => {
   }
 
   try {
-    // Step 1: Search in MongoDB for matching photos by filename or customTags
+    // Step 1: Search MongoDB for matching photos by filename or customTags
     const matchedPhotos = await Photo.find({
       $or: [
         { filename: { $regex: searchTerm, $options: 'i' } },
@@ -403,30 +410,44 @@ exports.searchPhotos = async (req, res, oauth2Client) => {
       return res.status(200).json([]); // No matches found
     }
 
-    // Step 2: Retrieve images from Google Photos API and filter by googlePhotoId
+    // Step 2: Retrieve images from Google Photos API with pagination
     const photosUrl = 'https://photoslibrary.googleapis.com/v1/mediaItems:search';
     const headers = {
       Authorization: `Bearer ${oauth2Client.credentials.access_token}`,
     };
 
-    const googlePhotos = [];
+    let googlePhotos = [];
+    let nextPageToken = null;
+
     try {
-      // Make a single API call to retrieve recent photos from Google Photos
-      const response = await axios.post(
-        photosUrl,
-        { 
-          filters: { mediaTypeFilter: { mediaTypes: ["PHOTO"] } }
-        },
-        { headers }
-      );
+      // Keep fetching until all photos are retrieved
+      do {
+        const requestPayload = {
+          filters: {
+            mediaTypeFilter: { mediaTypes: ["PHOTO"] }
+          },
+          pageSize: 100, // Adjust the page size to retrieve more results per request
+          ...(nextPageToken && { pageToken: nextPageToken }) // Add nextPageToken for pagination
+        };
+
+        const response = await axios.post(photosUrl, requestPayload, { headers });
+
+        // Add the current batch of photos to the googlePhotos array
+        const photos = response.data.mediaItems || [];
+        googlePhotos.push(...photos);
+
+        // Check for the next page of results
+        nextPageToken = response.data.nextPageToken;
+
+      } while (nextPageToken); // Continue fetching if there's another page
 
       // Filter photos returned by Google Photos to match googlePhotoId from MongoDB
-      const photos = response.data.mediaItems || [];
-      const matchedGooglePhotos = photos.filter(photo => 
+      const matchedGooglePhotos = googlePhotos.filter(photo =>
         matchedGooglePhotoIds.includes(photo.id)
       );
 
-      googlePhotos.push(...matchedGooglePhotos);
+      googlePhotos = matchedGooglePhotos; // Use the filtered photos
+
     } catch (photoError) {
       console.error('Error fetching photos from Google Photos:', photoError);
     }
@@ -449,6 +470,7 @@ exports.searchPhotos = async (req, res, oauth2Client) => {
     res.status(500).json({ error: 'Error fetching photos from Google Photos' });
   }
 };
+
 
 
 // exports.getPhotoDetails = async (req, res, oauth2Client) => {

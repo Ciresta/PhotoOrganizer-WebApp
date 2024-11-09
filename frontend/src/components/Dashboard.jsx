@@ -53,30 +53,24 @@ const Dashboard = () => {
     fetchPhotos(fromDate, toDate, location);
   };
 
-
-
   const groupPhotosByDate = (photos) => {
     const grouped = {};
     photos.forEach(photo => {
-      // Check for creationTime
       const photoDate = photo.creationTime ? parseISO(photo.creationTime) : null;
       if (!photoDate || isNaN(photoDate)) {
         console.error('Missing or invalid creationTime for photo:', photo);
         return;
       }
-  
+
       const dateKey = format(photoDate, 'yyyy-MM-dd');
       if (!grouped[dateKey]) {
         grouped[dateKey] = [];
       }
       grouped[dateKey].push(photo);
     });
-  
     return grouped;
   };
-  
 
-  // Format date header
   const formatDateHeader = (dateString) => {
     const date = parseISO(dateString);
     if (isToday(date)) return 'Today';
@@ -160,13 +154,6 @@ const Dashboard = () => {
 
       {errorMessage && <p className="text-red-500">{errorMessage}</p>}
 
-      {/* <button
-        onClick={() => setIsModalOpen(true)}
-        className="mb-4 px-4 py-2 bg-blue-500 text-white rounded"
-      >
-        Filter Photos
-      </button> */}
-
       <FilterModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -174,7 +161,7 @@ const Dashboard = () => {
       />
 
       {/* Search Input */}
-      <div className="relative w-[57rem] absolute top-[-140px]">
+      <div className="relative w-[57rem] absolute top-[-130px]">
         <input
           type="text"
           value={searchTerm}
@@ -197,7 +184,7 @@ const Dashboard = () => {
               <div
                 key={index}
                 className="border rounded-lg shadow-md overflow-hidden cursor-pointer"
-                onClick={() => setSelectedPhoto(photo)} // Open ImageViewer on click
+                onClick={() => handlePhotoClick(photo.googlePhotoId)} // Use handlePhotoClick with Google Photo ID
               >
                 <img
                   src={photo.url}
@@ -210,6 +197,7 @@ const Dashboard = () => {
           </div>
         </div>
       )}
+
 
       {/* Render grouped photos */}
       <div>
@@ -233,7 +221,6 @@ const Dashboard = () => {
             </div>
           </div>
         ))}
-
       </div>
 
       {photos.length === 0 && !errorMessage && (
