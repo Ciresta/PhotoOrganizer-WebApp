@@ -6,34 +6,31 @@ const cors = require('cors');
 const oauthController = require('./controllers/oauthController');
 const uploadController = require('./controllers/uploadController');
 const refreshTokenMiddleware = require('./middlewares/refreshTokenMiddleware');
-const connectToDatabase = require('./config/db'); // Use the Mongoose-based connection
+const connectToDatabase = require('./config/db'); 
 
 const app = express();
 const port = process.env.PORT || 5000;
 
 app.use(cors({
-  origin: 'http://localhost:3000', // Replace with your React app's URL
+  origin: 'http://localhost:3000', 
   credentials: true
 }));
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-const upload = multer({ dest: 'uploads/' }); // Directory for uploaded files
+const upload = multer({ dest: 'uploads/' }); 
 
-// OAuth2 client imported from oauthController
+
 const oauth2Client = oauthController.oauth2Client;
 
-// Auth routes
 app.get('/auth/google', oauthController.getAuthUrl);
 app.get('/auth/google/callback', oauthController.handleAuthCallback);
 
-// Photo upload route - handle multiple file uploads
 app.post('/add', upload.array('photos', 10), refreshTokenMiddleware, (req, res) => {
-  uploadController.uploadPhotos(req, res, oauth2Client); // Adjusted to handle multiple photos
+  uploadController.uploadPhotos(req, res, oauth2Client); 
 });
 
-// Route to get all photos from Google Photos
 app.get('/photos', refreshTokenMiddleware, (req, res) => {
   uploadController.getGooglePhotos(req, res, oauth2Client);
 });
@@ -62,6 +59,14 @@ app.delete('/deletetags', refreshTokenMiddleware, (req, res) => {
   uploadController.deleteCustomTags(req, res, oauthController.oauth2Client);
 });
 
+
+app.post('/slideshows', refreshTokenMiddleware, (req, res) => {
+  uploadController.createSlideshow(req, res, oauthController.oauth2Client);
+});
+
+app.get('/displayslideshows', refreshTokenMiddleware, (req, res) => {
+  uploadController.displayAllSlideshows(req, res, oauthController.oauth2Client);
+});
 
 // app.get('/photos/:photoId',refreshTokenMiddleware, (req, res) => {
 //   uploadController.getPhotoDetails(req, res, oauth2Client);

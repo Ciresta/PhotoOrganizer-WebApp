@@ -2,7 +2,9 @@ const axios = require('axios');
 const fs = require('fs');
 const { VisionServiceClient } = require('@google-cloud/vision');
 const Photo = require('../models/PhotoSchema'); // Import the Photo model
+const Slideshow = require('../models/SlideshowSchema'); // Import the Photo model
 const { OAuth2Client } = require('google-auth-library');
+const { google } = require('googleapis');
 
 // exports.uploadPhotos = async (req, res, oauth2Client) => {
 //   const files = req.files;
@@ -456,7 +458,8 @@ exports.searchPhotos = async (req, res, oauth2Client) => {
     const photoDetails = googlePhotos.map((photo) => {
       const dbRecord = matchedPhotos.find(item => item.googlePhotoId === photo.id);
       return {
-        url: `${photo.baseUrl}=w500-h500`, // Resize as needed
+        url: `${photo.baseUrl}=w500-h500`, 
+        id: photo.id,
         filename: photo.filename,
         creationTime: photo.mediaMetadata?.creationTime || null,
         customTags: dbRecord?.customTags || [],
@@ -679,6 +682,129 @@ exports.deleteCustomTags = async (req, res) => {
     res.status(500).json({ message: 'Failed to delete custom tag' });
   }
 };
+
+exports.createSlideshow = async (req, res, oauth2Client) => {
+  const { name, photoIds } = req.body;
+
+  // Validate input
+  if (!name || !photoIds || photoIds.length === 0) {
+    return res.status(400).json({ error: 'Name and at least one photo are required.' });
+  }
+
+  try {
+    // Ensure oauth2Client is provided
+    if (!oauth2Client || !oauth2Client.credentials?.access_token) {
+      return res.status(401).json({ error: 'Unauthorized: No access token provided.' });
+    }
+
+    const headers = { Authorization: `Bearer ${oauth2Client.credentials.access_token}` };
+    const photoUrls = [];
+
+    // Fetch URLs for the given photo IDs
+    for (const photoId of photoIds) {
+      try {
+        const response = await axios.get(
+          `https://photoslibrary.googleapis.com/v1/mediaItems/${photoId}`,
+          { headers }
+        );
+        const baseUrl = response.data.baseUrl;
+        photoUrls.push(`${baseUrl}=w500-h500`); // Save formatted URLs
+      } catch (error) {
+        console.error(`Error fetching photo URL for ID ${photoId}:`, error.response?.data || error.message);
+        photoUrls.push(null); // Handle missing photo gracefully
+      }
+    }
+
+    // Check for any missing photo URLs
+    if (photoUrls.includes(null)) {
+      return res.status(400).json({ error: 'Some photo IDs could not be resolved to URLs.' });
+    }
+
+    // Create and save the slideshow
+    const slideshow = new Slideshow({ name, photoIds, photoUrls });
+    await slideshow.save();
+
+    res.status(201).json({
+      message: 'Slideshow created successfully.',
+      slideshow,
+    });
+  } catch (error) {
+    console.error('Error saving slideshow:', error);
+    res.status(500).json({ error: 'Failed to create slideshow.' });
+  }
+};
+
+
+exports.displayAllSlideshows = async (req, res, oauth2Client) => {
+  try {
+    // Ensure oauth2Client has valid credentials
+    if (!oauth2Client || !oauth2Client.credentials?.access_token) {
+      return res.status(401).json({ error: 'No valid access token. Please log in again.' });
+    }
+
+    // Fetch all slideshows from the database
+    const slideshows = await Slideshow.find();
+
+    if (!slideshows || slideshows.length === 0) {
+      return res.status(404).json({ error: 'No slideshows found' });
+    }
+
+    // Attach URLs directly from the stored `photoUrls`
+    const enrichedSlideshows = slideshows.map(slideshow => ({
+      name: slideshow.name,
+      createdAt: slideshow.createdAt,
+      photoUrls: slideshow.photoUrls, // URLs are already saved in the database
+    }));
+
+    res.status(200).json({ slideshows: enrichedSlideshows });
+  } catch (error) {
+    console.error('Error fetching slideshows:', error);
+    res.status(500).json({ error: 'Failed to fetch slideshows' });
+  }
+};
+
+
+// Function to fetch all Google Photos using pagination
+async function fetchAllGooglePhotos(oauth2Client) {
+  if (!oauth2Client.credentials?.access_token) {
+    throw new Error('No access token. Please log in again.');
+  }
+
+  const photosUrl = 'https://photoslibrary.googleapis.com/v1/mediaItems:search';
+  const headers = { Authorization: `Bearer ${oauth2Client.credentials.access_token}` };
+  let allPhotos = [];
+  let pageToken = null;
+
+  try {
+    // Loop to fetch all pages of photos
+    do {
+      const response = await axios.post(
+        photosUrl,
+        { pageToken, pageSize: 100 }, // Fetch 100 photos per page
+        { headers }
+      );
+
+      const photos = response.data.mediaItems || [];
+      pageToken = response.data.nextPageToken || null;
+
+      // Extract relevant photo details
+      const photoDetails = photos.map(photo => ({
+        id: photo.id,
+        filename: photo.filename,
+        url: photo.baseUrl,
+        creationTime: photo.mediaMetadata?.creationTime,
+      }));
+
+      allPhotos = allPhotos.concat(photoDetails);
+    } while (pageToken);
+
+    return allPhotos;
+  } catch (error) {
+    console.error('Error fetching photos from Google Photos API:', error);
+    throw new Error('Failed to fetch photos from Google Photos');
+  }
+}
+
 
 // exports.syncGooglePhotos = async (req, res, oauth2Client) => {
 //   try {

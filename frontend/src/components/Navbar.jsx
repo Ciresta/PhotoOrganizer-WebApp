@@ -52,10 +52,10 @@ const Navbar = ({ isAuthenticated, onLogout, user }) => {
           <span className="text-base">Upload</span>
         </Link>
 
-        <a href="#slideshow" className="flex items-center space-x-1 text-gray-700 text-base">
+        <Link to="/slideshow" className="flex items-center space-x-1 text-gray-700 text-base">
           <img src={slideshowIcon} alt="Slideshow" className="w-5 h-5" />
           <span className="text-base">Slideshow</span>
-        </a>
+        </Link>
 
         {isAuthenticated ? (
           <div className="relative flex items-center space-x-1">
