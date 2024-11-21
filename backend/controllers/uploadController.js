@@ -927,6 +927,7 @@ exports.deleteSlideshow = async (req, res) => {
 
 
 
+
 // exports.syncGooglePhotos = async (req, res, oauth2Client) => {
 //   try {
 //     // Fetch photos from Google Photos
@@ -968,3 +969,4 @@ exports.deleteSlideshow = async (req, res) => {
 //     }
 //   }
 // };
+
