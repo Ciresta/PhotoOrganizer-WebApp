@@ -3,8 +3,7 @@ const fs = require('fs');
 const { VisionServiceClient } = require('@google-cloud/vision');
 const Photo = require('../models/PhotoSchema'); // Import the Photo model
 const Slideshow = require('../models/SlideshowSchema'); // Import the Photo model
-const { OAuth2Client } = require('google-auth-library');
-const { google } = require('googleapis');
+const { v4: uuidv4 } = require('uuid');
 
 // exports.uploadPhotos = async (req, res, oauth2Client) => {
 //   const files = req.files;
@@ -720,8 +719,16 @@ exports.createSlideshow = async (req, res, oauth2Client) => {
       return res.status(400).json({ error: 'Some photo IDs could not be resolved to URLs.' });
     }
 
+    // Generate slideshowId using name and random number
+    const slideshowId = `${name.replace(/\s+/g, '-').toLowerCase()}-${uuidv4().slice(0, 8)}`;
+
     // Create and save the slideshow
-    const slideshow = new Slideshow({ name, photoIds, photoUrls });
+    const slideshow = new Slideshow({
+      slideshowId,
+      name,
+      photoIds,
+      photoUrls,
+    });
     await slideshow.save();
 
     res.status(201).json({
@@ -749,8 +756,9 @@ exports.displayAllSlideshows = async (req, res, oauth2Client) => {
       return res.status(404).json({ error: 'No slideshows found' });
     }
 
-    // Attach URLs directly from the stored `photoUrls`
+    // Attach slideshowId, name, createdAt, and photoUrls from the stored slideshow
     const enrichedSlideshows = slideshows.map(slideshow => ({
+      slideshowId: slideshow.slideshowId, // Add slideshowId to the response
       name: slideshow.name,
       createdAt: slideshow.createdAt,
       photoUrls: slideshow.photoUrls, // URLs are already saved in the database
@@ -769,7 +777,8 @@ exports.deleteSlideshow = async (req, res) => {
   console.log(`Deleting slideshow with ID: ${id}`); // Add this line for debugging
 
   try {
-    const slideshow = await Slideshow.findByIdAndDelete(id);
+    // Use the 'slideshowId' field in the query to match the provided ID
+    const slideshow = await Slideshow.findOneAndDelete({ slideshowId: id });
 
     if (!slideshow) {
       return res.status(404).json({ message: 'Slideshow not found.' });
@@ -781,6 +790,8 @@ exports.deleteSlideshow = async (req, res) => {
     return res.status(500).json({ message: 'Failed to delete slideshow. Please try again.' });
   }
 };
+
+
 
 // exports.syncGooglePhotos = async (req, res, oauth2Client) => {
 //   try {

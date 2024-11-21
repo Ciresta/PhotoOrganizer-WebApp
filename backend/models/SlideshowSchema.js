@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const SlideshowSchema = new mongoose.Schema({
+  slideshowId: { type: String, required: true },
   name: { type: String, required: true },
   photoIds: { type: [String], required: true }, // List of photo IDs
   photoUrls: { type: [String], required: true }, // List of photo URLs

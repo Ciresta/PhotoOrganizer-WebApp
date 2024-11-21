@@ -69,7 +69,7 @@ const Slideshow = () => {
 
       // Remove the deleted slideshow from the state
       setSlideshows((prevSlideshows) =>
-        prevSlideshows.filter((slideshow) => slideshow._id !== selectedSlideshowId)
+        prevSlideshows.filter((slideshow) => slideshow.slideshowId !== selectedSlideshowId)
       );
 
       setIsDeleting(false); // Close confirmation modal
@@ -115,7 +115,7 @@ const Slideshow = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {slideshows.map((slideshow) => (
           <div
-            key={slideshow._id}
+            key={slideshow.slideshowId}  // Use slideshowId for unique key
             className="slideshow-card bg-white rounded-lg shadow-md overflow-hidden transition-transform transform hover:scale-105"
           >
             {/* Header Section */}
@@ -124,14 +124,14 @@ const Slideshow = () => {
               <div className="flex gap-2">
                 <button
                   className="bg-white text-blue-500 py-2 px-4 rounded-full flex items-center gap-2 shadow hover:shadow-md hover:bg-blue-100 transition"
-                  onClick={() => getSlideshowLink(slideshow._id)}
+                  onClick={() => getSlideshowLink(slideshow.slideshowId)}  // Use slideshowId here
                 >
                   <FaLink /> Get Link
                 </button>
                 <button
                   className="bg-red-500 text-white py-2 px-4 rounded-full flex items-center gap-2 shadow hover:shadow-md hover:bg-red-600 transition"
                   onClick={() => {
-                    setSelectedSlideshowId(slideshow._id); // Ensure this sets the correct ID for deletion
+                    setSelectedSlideshowId(slideshow.slideshowId);  // Ensure this sets the correct ID for deletion
                     setIsDeleting(true); // Show confirmation modal
                   }}
                 >
