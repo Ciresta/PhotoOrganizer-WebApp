@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import FilterModal from './DateFilter';
-import ImageViewer from './ImageViewer'; 
+import ImageViewer from './ImageViewer';
 import { format, isToday, isYesterday, parseISO } from 'date-fns';
 import searchIcon from '../assets/images/search.svg';
+import { faStar } from '@fortawesome/free-regular-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 const Dashboard = () => {
   const [photos, setPhotos] = useState([]);
@@ -12,10 +14,12 @@ const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
-  const [selectedPhoto, setSelectedPhoto] = useState(null); 
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [selectedPhotos, setSelectedPhotos] = useState([]);
   const [isSlideshowModalOpen, setIsSlideshowModalOpen] = useState(false);
   const [slideshowName, setSlideshowName] = useState('');
+  const [slideshowSearchTerm, setSlideshowSearchTerm] = useState(''); // For search in slideshow modal
+  const [slideshowSearchResults, setSlideshowSearchResults] = useState([]); // Search results for slideshow modal
 
   const fetchPhotos = async (fromDate, toDate, location) => {
     try {
@@ -26,7 +30,7 @@ const Dashboard = () => {
         return;
       }
 
-      const response = await axios.get(`http://localhost:5000/photos`, {
+      const response = await axios.get('http://localhost:5000/photos', {
         params: {
           fromDate: fromDate || undefined,
           toDate: toDate || undefined,
@@ -98,7 +102,12 @@ const Dashboard = () => {
           },
         });
 
-        setSearchResults(response.data); // Update search results
+        const resultsWithCorrectUrls = response.data.map((photo) => ({
+          ...photo,
+          url: photo.url.includes('http') ? photo.url : `http://localhost:5000/${photo.url}`,
+        }));
+
+        setSearchResults(resultsWithCorrectUrls);
       } catch (error) {
         console.error('Error searching photos:', error.response?.data || error.message);
         setErrorMessage(error.response?.data?.error || 'Failed to search photos. Please try again.');
@@ -108,37 +117,70 @@ const Dashboard = () => {
     }
   };
 
+  const handleSearchInSlideshowModal = async (e) => {
+    if (e.key === 'Enter') {
+      setIsLoading(true);
+      setSlideshowSearchResults([]); // Clear previous results in the slideshow modal
+
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setErrorMessage('No authentication token found. Please log in.');
+          return;
+        }
+
+        const response = await axios.post('http://localhost:5000/searchPhotos', {
+          searchTerm: slideshowSearchTerm,
+        }, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const resultsWithCorrectUrls = response.data.map((photo) => ({
+          ...photo,
+          url: photo.url.includes('http') ? photo.url : `http://localhost:5000/${photo.url}`,
+        }));
+
+        setSlideshowSearchResults(resultsWithCorrectUrls);
+      } catch (error) {
+        console.error('Error searching photos in slideshow:', error.response?.data || error.message);
+        setErrorMessage(error.response?.data?.error || 'Failed to search photos. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
   const saveSlideshow = async () => {
-    if (!slideshowName.trim() || selectedPhotos.length === 0) {
-      alert('Please provide a name and select at least one photo.');
+    if (!slideshowName.trim() || selectedPhotos.length < 2) {
+      alert('Please provide a name and select at least two photo.');
       return;
     }
-  
+
     try {
       const token = localStorage.getItem('token');
       if (!token) {
         setErrorMessage('No authentication token found. Please log in.');
         return;
       }
-  
+
       const response = await axios.post(
         'http://localhost:5000/slideshows',
         { name: slideshowName, photoIds: selectedPhotos },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-  
+
       alert('Slideshow created successfully!');
-      setIsSlideshowModalOpen(false); // Close modal
-      setSelectedPhotos([]); // Reset selected photos
-      setSlideshowName(''); // Clear slideshow name
+      setIsSlideshowModalOpen(false);
+      setSelectedPhotos([]);
+      setSlideshowName('');
     } catch (error) {
       console.error('Error saving slideshow:', error.response?.data || error.message);
       setErrorMessage('Failed to save slideshow. Please try again.');
     }
   };
-  
-  
-  
+
   const handlePhotoClick = async (photoId) => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -156,7 +198,7 @@ const Dashboard = () => {
       const { photoDetails, customTags } = response.data;
 
       const photoWithTags = { ...photoDetails, tags: customTags || [] };
-      setSelectedPhoto(photoWithTags); 
+      setSelectedPhoto(photoWithTags);
     } catch (error) {
       console.error('Error fetching photo details:', error.response || error);
       setErrorMessage('Failed to load photo details. Please try again.');
@@ -173,74 +215,57 @@ const Dashboard = () => {
 
   return (
     <div className="p-8">
-    <div className="grid grid-cols-2 justify-end items-end">
-      <h1 className="text-4xl font-semibold mb-4" style={{ fontFamily: 'Roboto, sans-serif', color: '#202124' }}>
-        Welcome to Your Workspace 😄
-      </h1>
-      <button
-        onClick={() => setIsSlideshowModalOpen(true)}
-        className="mt-4 px-4 py-2 bg-green-500 text-white rounded"
-      >
-        Create Slideshow
-      </button>
-    </div>
-  
-    {errorMessage && <p className="text-red-500">{errorMessage}</p>}
-  
-    <FilterModal
-      isOpen={isModalOpen}
-      onClose={() => setIsModalOpen(false)}
-      onApply={handleFilterApply}
-    />
-  
-    <div className="relative w-[57rem] absolute top-[-130px]">
-      <input
-        type="text"
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        onKeyPress={handleSearch}
-        placeholder='Search "Food"'
-        className="w-full bg-[#f2f3f8] rounded-full py-2 pl-5 pr-10 focus:outline-none text-gray-500"
-      />
-      <img src={searchIcon} alt="Search" className="absolute right-4 top-2 w-4 h-4" />
-    </div>
-  
-    {isLoading && <p className="mt-4 text-blue-500">Loading...</p>}
-  
-    {searchResults.length > 0 ? (
-      // Display search results
-      <div>
-        <h2 className="text-2xl font-semibold mb-4">Search Results:</h2>
-        <div className="grid grid-cols-3 gap-4">
-          {searchResults.map((photo, index) => (
-            <div
-              key={index}
-              className="border rounded-lg shadow-md overflow-hidden cursor-pointer"
-              onClick={() => handlePhotoClick(photo.id)}
-            >
-              <img
-                src={photo.url}
-                alt={photo.filename}
-                className="w-full h-48 object-cover"
-              />
-            </div>
-          ))}
-        </div>
+      <div className="grid grid-cols-2 justify-end items-end">
+        <h1 className="text-4xl invisible font-semibold mb-4" style={{ fontFamily: 'Roboto, sans-serif', color: '#202124' }}>
+          Welcome to Your Workspace 😄
+        </h1>
+        <a
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            setIsSlideshowModalOpen(true); 
+          }}
+          className="flex items-center space-x-1 text-gray-700 text-base absolute right-[113px] top-[28px]"
+        >
+          <FontAwesomeIcon icon={faStar} className="w-5 h-5 text-gray-700" />
+          <span className="text-base">Create</span>
+        </a>
       </div>
-    ) : (
-      // Display normal photos if there are no search results
-      Object.keys(groupedPhotos).map((dateKey) => (
-        <div key={dateKey}>
-          <h2 className="text-2xl font-semibold mb-4">{formatDateHeader(dateKey)}</h2>
+
+      {errorMessage && <p className="text-red-500">{errorMessage}</p>}
+
+      <FilterModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onApply={handleFilterApply}
+      />
+
+      <div className="relative w-[57rem] absolute top-[-130px]">
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          onKeyPress={handleSearch}
+          placeholder='Search "Food"'
+          className="w-full bg-[#f2f3f8] rounded-full py-2 pl-5 pr-10 focus:outline-none text-gray-500"
+        />
+        <img src={searchIcon} alt="Search" className="absolute right-4 top-2 w-4 h-4" />
+      </div>
+
+      {isLoading && <p className="mt-4 text-blue-500">Loading...</p>}
+
+      {searchResults.length > 0 ? (
+        <div>
+          <h2 className="text-2xl font-semibold mb-4">Search Results:</h2>
           <div className="grid grid-cols-3 gap-4">
-            {groupedPhotos[dateKey].map((photo) => (
+            {searchResults.map((photo, index) => (
               <div
-                key={photo.id}
+                key={index}
                 className="border rounded-lg shadow-md overflow-hidden cursor-pointer"
                 onClick={() => handlePhotoClick(photo.id)}
               >
                 <img
-                  src={`${photo.url}=w500-h500`}
+                  src={photo.url}
                   alt={photo.filename}
                   className="w-full h-48 object-cover"
                 />
@@ -248,56 +273,113 @@ const Dashboard = () => {
             ))}
           </div>
         </div>
-      ))
-    )}
-  
-    {isSlideshowModalOpen && (
-      <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center">
-        <div className="bg-white p-6 rounded-lg shadow-lg w-1/3">
-          <h2 className="text-xl font-semibold mb-4">Create Slideshow</h2>
-          <input
-            type="text"
-            value={slideshowName}
-            onChange={(e) => setSlideshowName(e.target.value)}
-            placeholder="Enter slideshow name"
-            className="w-full border p-2 mb-4 rounded"
-          />
-          <div className="grid grid-cols-3 gap-4 max-h-64 overflow-y-scroll">
-            {photos.map((photo) => (
+      ) : (
+        Object.keys(groupedPhotos).map((dateKey) => (
+          <div key={dateKey}>
+            <h2 className="text-2xl font-semibold mb-4">{formatDateHeader(dateKey)}</h2>
+            <div className="grid grid-cols-3 gap-4">
+              {groupedPhotos[dateKey].map((photo) => (
+                <div
+                  key={photo.id}
+                  className="border rounded-lg shadow-md overflow-hidden cursor-pointer"
+                  onClick={() => handlePhotoClick(photo.id)}
+                >
+                  <img
+                    src={`${photo.url}=w500-h500`}
+                    alt={photo.filename}
+                    className="w-full h-48 object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))
+      )}
+
+{isSlideshowModalOpen && (
+  <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
+    <div className="bg-white p-8 rounded-xl shadow-xl max-w-4xl w-full relative">
+      
+      {/* Close Button */}
+      <button
+        onClick={() => setIsSlideshowModalOpen(false)}
+        className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 focus:outline-none text-2xl"
+      >
+        &times;
+      </button>
+
+      <h2 className="text-2xl font-semibold mb-6 text-gray-900">Create Slideshow</h2>
+      
+      {/* Slideshow Name Input */}
+      <input
+        type="text"
+        value={slideshowName}
+        onChange={(e) => setSlideshowName(e.target.value)}
+        placeholder="Enter slideshow name"
+        className="w-full p-3 mb-6 text-lg rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+
+      {/* Search Bar */}
+      <div className="relative mb-6">
+        <input
+          type="text"
+          value={slideshowSearchTerm}
+          onChange={(e) => setSlideshowSearchTerm(e.target.value)}
+          onKeyPress={handleSearchInSlideshowModal}
+          placeholder="Search photos..."
+          className="w-full bg-[#f8f9fa] text-gray-700 pl-12 pr-4 py-3 rounded-full shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <img src={searchIcon} alt="Search" className="absolute left-4 top-3 w-5 h-5 text-gray-500" />
+      </div>
+
+      {/* Photo Grid */}
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4 max-h-64 overflow-y-auto">
+        {slideshowSearchResults.length > 0
+          ? slideshowSearchResults.map((photo) => (
               <div
                 key={photo.id}
-                className={`border rounded-lg shadow-md overflow-hidden cursor-pointer ${selectedPhotos.includes(photo.id) ? 'border-blue-500' : ''
-                  }`}
+                className={`border rounded-lg shadow-md overflow-hidden cursor-pointer transition-transform duration-300 transform hover:scale-105 ${selectedPhotos.includes(photo.id) ? 'border-blue-500 border-4' : ''}`}
                 onClick={() => togglePhotoSelection(photo.id)}
               >
-                <img src={`${photo.url}=w200-h200`} alt={photo.filename} className="w-full h-32 object-cover" />
+                <img src={photo.url} alt={photo.filename} className="w-full h-40 object-cover" />
+              </div>
+            ))
+          : photos.map((photo) => (
+              <div
+                key={photo.id}
+                className={`border rounded-lg shadow-md overflow-hidden cursor-pointer transition-transform duration-300 transform hover:scale-105 ${selectedPhotos.includes(photo.id) ? 'border-blue-500 border-4' : ''}`}
+                onClick={() => togglePhotoSelection(photo.id)}
+              >
+                <img src={photo.url} alt={photo.filename} className="w-full h-40 object-cover" />
               </div>
             ))}
-          </div>
-          <div className="mt-4 flex justify-end space-x-2">
-            <button onClick={() => setIsSlideshowModalOpen(false)} className="px-4 py-2 bg-gray-500 text-white rounded">
-              Cancel
-            </button>
-            <button onClick={saveSlideshow} className="px-4 py-2 bg-blue-500 text-white rounded">
-              Save
-            </button>
-          </div>
-        </div>
       </div>
-    )}
-  
-    {photos.length === 0 && !errorMessage && (
-      <p className="mt-4 text-gray-600">No photos found in your Google account for the selected date range.</p>
-    )}
-  
-    {selectedPhoto && (
-      <ImageViewer
-        photo={selectedPhoto}
-        onClose={() => setSelectedPhoto(null)}
-      />
-    )}
+
+      {/* Save Button */}
+      <div className="mt-6 flex justify-end gap-4">
+        <button
+          onClick={saveSlideshow}
+          className="px-6 py-2 bg-blue-600 text-white rounded-lg text-lg font-semibold hover:bg-blue-700 transition"
+        >
+          Save
+        </button>
+      </div>
+    </div>
   </div>
-  
+)}
+
+
+      {photos.length === 0 && !errorMessage && (
+        <p className="mt-4 text-gray-600">No photos found in your Google account for the selected date range.</p>
+      )}
+
+      {selectedPhoto && (
+        <ImageViewer
+          photo={selectedPhoto}
+          onClose={() => setSelectedPhoto(null)}
+        />
+      )}
+    </div>
   );
 };
 

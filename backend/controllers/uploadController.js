@@ -764,47 +764,23 @@ exports.displayAllSlideshows = async (req, res, oauth2Client) => {
 };
 
 
-// Function to fetch all Google Photos using pagination
-async function fetchAllGooglePhotos(oauth2Client) {
-  if (!oauth2Client.credentials?.access_token) {
-    throw new Error('No access token. Please log in again.');
-  }
-
-  const photosUrl = 'https://photoslibrary.googleapis.com/v1/mediaItems:search';
-  const headers = { Authorization: `Bearer ${oauth2Client.credentials.access_token}` };
-  let allPhotos = [];
-  let pageToken = null;
+exports.deleteSlideshow = async (req, res) => {
+  const { id } = req.params;
+  console.log(`Deleting slideshow with ID: ${id}`); // Add this line for debugging
 
   try {
-    // Loop to fetch all pages of photos
-    do {
-      const response = await axios.post(
-        photosUrl,
-        { pageToken, pageSize: 100 }, // Fetch 100 photos per page
-        { headers }
-      );
+    const slideshow = await Slideshow.findByIdAndDelete(id);
 
-      const photos = response.data.mediaItems || [];
-      pageToken = response.data.nextPageToken || null;
+    if (!slideshow) {
+      return res.status(404).json({ message: 'Slideshow not found.' });
+    }
 
-      // Extract relevant photo details
-      const photoDetails = photos.map(photo => ({
-        id: photo.id,
-        filename: photo.filename,
-        url: photo.baseUrl,
-        creationTime: photo.mediaMetadata?.creationTime,
-      }));
-
-      allPhotos = allPhotos.concat(photoDetails);
-    } while (pageToken);
-
-    return allPhotos;
+    return res.status(200).json({ message: 'Slideshow deleted successfully.' });
   } catch (error) {
-    console.error('Error fetching photos from Google Photos API:', error);
-    throw new Error('Failed to fetch photos from Google Photos');
+    console.error('Error deleting slideshow:', error);
+    return res.status(500).json({ message: 'Failed to delete slideshow. Please try again.' });
   }
-}
-
+};
 
 // exports.syncGooglePhotos = async (req, res, oauth2Client) => {
 //   try {

@@ -16,6 +16,7 @@ app.use(cors({
   credentials: true
 }));
 
+app.use('/public', express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
@@ -68,6 +69,11 @@ app.get('/displayslideshows', refreshTokenMiddleware, (req, res) => {
   uploadController.displayAllSlideshows(req, res, oauthController.oauth2Client);
 });
 
+app.delete('/slideshows/:id', refreshTokenMiddleware, (req, res) => {
+  uploadController.deleteSlideshow(req, res, oauthController.oauth2Client);
+});
+
+  
 // app.get('/photos/:photoId',refreshTokenMiddleware, (req, res) => {
 //   uploadController.getPhotoDetails(req, res, oauth2Client);
 // });
