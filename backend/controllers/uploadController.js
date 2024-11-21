@@ -101,6 +101,16 @@ exports.uploadPhotos = async (req, res, oauth2Client) => {
   }
 
   try {
+    // Retrieve user information from the OAuth2 token
+    const userInfoUrl = 'https://www.googleapis.com/oauth2/v1/userinfo?alt=json';
+    const userInfoResponse = await axios.get(userInfoUrl, {
+      headers: {
+        Authorization: `Bearer ${oauth2Client.credentials.access_token}`,
+      },
+    });
+    const ownerEmail = userInfoResponse.data.email; // Fetch owner email from the user's info
+    console.log('Owner Email:', ownerEmail);
+
     const uploadResults = [];
 
     if (files.length !== customTags.length) {
@@ -119,6 +129,7 @@ exports.uploadPhotos = async (req, res, oauth2Client) => {
         type: file.mimetype,
         uploadedAt: new Date(),
         customTags: tagsForCurrentFile,
+        ownerEmail, // Attach the owner's email to metadata
       };
 
       console.log('File Metadata:', fileMetadata);
@@ -197,49 +208,41 @@ exports.getGooglePhotos = async (req, res, oauth2Client) => {
     return res.status(401).send('Unauthorized: No access token provided');
   }
 
-  const { fromDate, toDate, location } = req.query;
+  const { location } = req.query; // No date filters applied here
 
   try {
     const photosUrl = 'https://photoslibrary.googleapis.com/v1/mediaItems:search';
     const headers = { Authorization: `Bearer ${oauth2Client.credentials.access_token}` };
 
+    // Prepare empty filters as we're not limiting by date anymore
     let filters = {};
-    if (fromDate && toDate) {
-      filters.dateFilter = {
-        ranges: [
-          {
-            startDate: {
-              year: parseInt(fromDate.split('-')[0]),
-              month: parseInt(fromDate.split('-')[1]),
-              day: parseInt(fromDate.split('-')[2]),
-            },
-            endDate: {
-              year: parseInt(toDate.split('-')[0]),
-              month: parseInt(toDate.split('-')[1]),
-              day: parseInt(toDate.split('-')[2]),
-            },
-          },
-        ],
-      };
-    }
 
     let allPhotos = [];
     let pageToken = null;
+
+    // Fetch user info to get the owner email
+    const userInfoUrl = 'https://www.googleapis.com/oauth2/v1/userinfo?alt=json';
+    const userInfoResponse = await axios.get(userInfoUrl, {
+      headers: {
+        Authorization: `Bearer ${oauth2Client.credentials.access_token}`,
+      },
+    });
+    const ownerEmail = userInfoResponse.data.email; // Get authenticated user's email
 
     // Loop to fetch all pages
     do {
       const response = await axios.post(
         photosUrl,
-        { filters, pageToken, pageSize: 100 }, // Increase pageSize to max (100)
+        { filters, pageToken, pageSize: 100 }, // Max page size (100)
         { headers }
       );
 
       const photos = response.data.mediaItems || [];
-      pageToken = response.data.nextPageToken || null;
+      pageToken = response.data.nextPageToken || null; // Check for the next page token
 
       const filteredPhotos = photos
         .filter(photo => photo.mediaMetadata?.creationTime)
-        .filter(photo => !location || (photo.location && photo.location.includes(location)));
+        .filter(photo => !location || (photo.location && photo.location.includes(location))); // Optionally filter by location
 
       // Save photo details to the database and prepare response data
       const photoDetails = await Promise.all(filteredPhotos.map(async (photo) => {
@@ -258,6 +261,7 @@ exports.getGooglePhotos = async (req, res, oauth2Client) => {
               customTags: [],
               description: 'Uploaded via PhotoTaggerApp',
               status: 'Uploaded',
+              ownerEmail: ownerEmail, // Include ownerEmail when saving the photo
             });
             await newPhoto.save();
           }
@@ -282,14 +286,15 @@ exports.getGooglePhotos = async (req, res, oauth2Client) => {
 
       allPhotos = allPhotos.concat(photoDetails.filter(photo => photo != null));
 
-    } while (pageToken);
+    } while (pageToken); // Continue until there are no more pages
 
-    res.json(allPhotos);
+    res.json(allPhotos); // Send all photos back as the response
   } catch (error) {
     console.error('Error fetching photos:', error);
     res.status(500).json({ error: 'Failed to fetch photos from Google Photos API' });
   }
 };
+
 
 
 // exports.getGooglePhotos = async (req, res, oauth2Client) => {
@@ -386,6 +391,93 @@ exports.getUserProfile = async (req, res, oauth2Client) => {
   }
 };
 
+// exports.searchPhotos = async (req, res, oauth2Client) => {
+//   const { searchTerm } = req.body;
+//   console.log('Received search term:', searchTerm);
+
+//   if (!oauth2Client.credentials?.access_token) {
+//     return res.status(401).json({ error: 'No access token. Please log in again.' });
+//   }
+
+//   try {
+//     // Step 1: Search MongoDB for matching photos by filename or customTags
+//     const matchedPhotos = await Photo.find({
+//       $or: [
+//         { filename: { $regex: searchTerm, $options: 'i' } },
+//         { customTags: { $elemMatch: { $regex: searchTerm, $options: 'i' } } }
+//       ]
+//     });
+
+//     console.log('Matched photos from MongoDB:', matchedPhotos);
+
+//     // Get Google Photo IDs from matched MongoDB records
+//     const matchedGooglePhotoIds = matchedPhotos.map(photo => photo.googlePhotoId);
+//     if (matchedGooglePhotoIds.length === 0) {
+//       return res.status(200).json([]); // No matches found
+//     }
+
+//     // Step 2: Retrieve images from Google Photos API with pagination
+//     const photosUrl = 'https://photoslibrary.googleapis.com/v1/mediaItems:search';
+//     const headers = {
+//       Authorization: `Bearer ${oauth2Client.credentials.access_token}`,
+//     };
+
+//     let googlePhotos = [];
+//     let nextPageToken = null;
+
+//     try {
+//       // Keep fetching until all photos are retrieved
+//       do {
+//         const requestPayload = {
+//           filters: {
+//             mediaTypeFilter: { mediaTypes: ["PHOTO"] }
+//           },
+//           pageSize: 100, // Adjust the page size to retrieve more results per request
+//           ...(nextPageToken && { pageToken: nextPageToken }) // Add nextPageToken for pagination
+//         };
+
+//         const response = await axios.post(photosUrl, requestPayload, { headers });
+
+//         // Add the current batch of photos to the googlePhotos array
+//         const photos = response.data.mediaItems || [];
+//         googlePhotos.push(...photos);
+
+//         // Check for the next page of results
+//         nextPageToken = response.data.nextPageToken;
+
+//       } while (nextPageToken); // Continue fetching if there's another page
+
+//       // Filter photos returned by Google Photos to match googlePhotoId from MongoDB
+//       const matchedGooglePhotos = googlePhotos.filter(photo =>
+//         matchedGooglePhotoIds.includes(photo.id)
+//       );
+
+//       googlePhotos = matchedGooglePhotos; // Use the filtered photos
+
+//     } catch (photoError) {
+//       console.error('Error fetching photos from Google Photos:', photoError);
+//     }
+
+//     // Step 3: Format response data by combining Google Photos with database details
+//     const photoDetails = googlePhotos.map((photo) => {
+//       const dbRecord = matchedPhotos.find(item => item.googlePhotoId === photo.id);
+//       return {
+//         url: `${photo.baseUrl}=w500-h500`, 
+//         id: photo.id,
+//         filename: photo.filename,
+//         creationTime: photo.mediaMetadata?.creationTime || null,
+//         customTags: dbRecord?.customTags || [],
+//       };
+//     });
+
+//     // Send formatted data back to client
+//     res.status(200).json(photoDetails);
+//   } catch (error) {
+//     console.error('Error searching photos:', error);
+//     res.status(500).json({ error: 'Error fetching photos from Google Photos' });
+//   }
+// };
+
 exports.searchPhotos = async (req, res, oauth2Client) => {
   const { searchTerm } = req.body;
   console.log('Received search term:', searchTerm);
@@ -395,8 +487,19 @@ exports.searchPhotos = async (req, res, oauth2Client) => {
   }
 
   try {
-    // Step 1: Search MongoDB for matching photos by filename or customTags
+    // Step 1: Fetch user info to get ownerEmail
+    const userInfoUrl = 'https://www.googleapis.com/oauth2/v1/userinfo?alt=json';
+    const userInfoResponse = await axios.get(userInfoUrl, {
+      headers: {
+        Authorization: `Bearer ${oauth2Client.credentials.access_token}`,
+      },
+    });
+    const ownerEmail = userInfoResponse.data.email; // Fetch the authenticated user's email
+    console.log('Owner Email:', ownerEmail);
+
+    // Step 2: Search MongoDB for matching photos by filename, customTags, and ownerEmail
     const matchedPhotos = await Photo.find({
+      ownerEmail: ownerEmail, // Ensure we're searching photos of the current user
       $or: [
         { filename: { $regex: searchTerm, $options: 'i' } },
         { customTags: { $elemMatch: { $regex: searchTerm, $options: 'i' } } }
@@ -411,7 +514,7 @@ exports.searchPhotos = async (req, res, oauth2Client) => {
       return res.status(200).json([]); // No matches found
     }
 
-    // Step 2: Retrieve images from Google Photos API with pagination
+    // Step 3: Retrieve images from Google Photos API with pagination
     const photosUrl = 'https://photoslibrary.googleapis.com/v1/mediaItems:search';
     const headers = {
       Authorization: `Bearer ${oauth2Client.credentials.access_token}`,
@@ -453,7 +556,7 @@ exports.searchPhotos = async (req, res, oauth2Client) => {
       console.error('Error fetching photos from Google Photos:', photoError);
     }
 
-    // Step 3: Format response data by combining Google Photos with database details
+    // Step 4: Format response data by combining Google Photos with database details
     const photoDetails = googlePhotos.map((photo) => {
       const dbRecord = matchedPhotos.find(item => item.googlePhotoId === photo.id);
       return {
@@ -608,7 +711,17 @@ exports.getPhotoDetailsWithTags = async (req, res, oauth2Client) => {
   }
 
   try {
-    // Step 1: Fetch the photo details from Google Photos using `photoId`
+    // Step 1: Fetch the authenticated user's email
+    const userInfoUrl = 'https://www.googleapis.com/oauth2/v1/userinfo?alt=json';
+    const userInfoResponse = await axios.get(userInfoUrl, {
+      headers: {
+        Authorization: `Bearer ${oauth2Client.credentials.access_token}`,
+      },
+    });
+    const ownerEmail = userInfoResponse.data.email; // Get authenticated user's email
+    console.log("Owner Email:", ownerEmail); // Log email to verify it's fetched correctly
+
+    // Step 2: Fetch photo details from Google Photos using `photoId`
     const photoDetailsUrl = `https://photoslibrary.googleapis.com/v1/mediaItems/${photoId}`;
     const headers = {
       Authorization: `Bearer ${oauth2Client.credentials.access_token}`,
@@ -617,11 +730,18 @@ exports.getPhotoDetailsWithTags = async (req, res, oauth2Client) => {
     const response = await axios.get(photoDetailsUrl, { headers });
     const photoData = response.data;
 
-    // Step 2: Fetch custom tags from MongoDB based on `googlePhotoId`
-    const photoRecord = await Photo.findOne({ googlePhotoId: photoId });
+    // Step 3: Fetch custom tags from MongoDB based on `googlePhotoId` and `ownerEmail`
+    console.log("Fetching photo record from MongoDB with googlePhotoId:", photoId, "and ownerEmail:", ownerEmail);
+    
+    const photoRecord = await Photo.findOne({ googlePhotoId: photoId, ownerEmail: ownerEmail });
+    if (!photoRecord) {
+      console.log("No photo record found in DB for this photoId and ownerEmail");
+    }
+    
     const customTags = photoRecord ? photoRecord.customTags : [];
+    console.log("Custom Tags found:", customTags); // Log custom tags to check if they are being fetched
 
-    // Step 3: Combine photo details with custom tags and send response
+    // Step 4: Combine Google Photos data with custom tags
     const photoDetails = {
       id: photoData.id,
       url: photoData.baseUrl,
@@ -631,8 +751,10 @@ exports.getPhotoDetailsWithTags = async (req, res, oauth2Client) => {
       width: photoData.mediaMetadata.width,
       height: photoData.mediaMetadata.height,
       mimeType: photoData.mimeType,
+      customTags: customTags,
     };
 
+    // Step 5: Return combined photo details and custom tags
     res.status(200).json({ photoDetails, customTags });
   } catch (error) {
     console.error('Error fetching photo details:', error.response ? error.response.data : error.message);
@@ -640,7 +762,7 @@ exports.getPhotoDetailsWithTags = async (req, res, oauth2Client) => {
   }
 };
 
-exports.addCustomTags = async (req, res) => {
+exports.addCustomTags = async (req, res, oauth2Client) => {
   const { tagName, googlePhotoId } = req.body;
 
   try {
@@ -756,19 +878,24 @@ exports.displayAllSlideshows = async (req, res, oauth2Client) => {
       return res.status(401).json({ error: 'No valid access token. Please log in again.' });
     }
 
-    // Fetch all slideshows from the database
-    const slideshows = await Slideshow.find();
+    // Fetch the user's email using oauth2Client
+    const oauth2 = google.oauth2({ auth: oauth2Client, version: 'v2' });
+    const userInfo = await oauth2.userinfo.get();
+    const ownerEmail = userInfo.data.email; // Extract the email of the authenticated user
+
+    // Fetch slideshows belonging to this user
+    const slideshows = await Slideshow.find({ ownerEmail }); // Filter by ownerEmail
 
     if (!slideshows || slideshows.length === 0) {
-      return res.status(404).json({ error: 'No slideshows found' });
+      return res.status(404).json({ error: 'No slideshows found for this user.' });
     }
 
     // Attach slideshowId, name, createdAt, and photoUrls from the stored slideshow
     const enrichedSlideshows = slideshows.map(slideshow => ({
-      slideshowId: slideshow.slideshowId, // Add slideshowId to the response
+      slideshowId: slideshow.slideshowId,
       name: slideshow.name,
       createdAt: slideshow.createdAt,
-      photoUrls: slideshow.photoUrls, // URLs are already saved in the database
+      photoUrls: slideshow.photoUrls,
     }));
 
     res.status(200).json({ slideshows: enrichedSlideshows });
