@@ -4,7 +4,7 @@ const { VisionServiceClient } = require('@google-cloud/vision');
 const Photo = require('../models/PhotoSchema'); // Import the Photo model
 const Slideshow = require('../models/SlideshowSchema'); // Import the Photo model
 const { v4: uuidv4 } = require('uuid');
-
+const { google } = require('googleapis');
 // exports.uploadPhotos = async (req, res, oauth2Client) => {
 //   const files = req.files;
 //   const customTags = JSON.parse(req.body.customTags || '[]');
@@ -696,6 +696,11 @@ exports.createSlideshow = async (req, res, oauth2Client) => {
       return res.status(401).json({ error: 'Unauthorized: No access token provided.' });
     }
 
+    // Fetch the user's email
+    const oauth2 = google.oauth2({ auth: oauth2Client, version: 'v2' });
+    const userInfo = await oauth2.userinfo.get();
+    const ownerEmail = userInfo.data.email; // Get the authenticated user's email
+
     const headers = { Authorization: `Bearer ${oauth2Client.credentials.access_token}` };
     const photoUrls = [];
 
@@ -722,13 +727,15 @@ exports.createSlideshow = async (req, res, oauth2Client) => {
     // Generate slideshowId using name and random number
     const slideshowId = `${name.replace(/\s+/g, '-').toLowerCase()}-${uuidv4().slice(0, 8)}`;
 
-    // Create and save the slideshow
+    // Create and save the slideshow with the owner's email
     const slideshow = new Slideshow({
       slideshowId,
       name,
       photoIds,
       photoUrls,
+      ownerEmail, // Add the email here
     });
+    console.log("Email : "+ownerEmail);
     await slideshow.save();
 
     res.status(201).json({

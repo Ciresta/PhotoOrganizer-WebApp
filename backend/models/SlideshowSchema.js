@@ -5,6 +5,7 @@ const SlideshowSchema = new mongoose.Schema({
   name: { type: String, required: true },
   photoIds: { type: [String], required: true }, // List of photo IDs
   photoUrls: { type: [String], required: true }, // List of photo URLs
+  ownerEmail: { type: String, required: true }, // Email of the owner
   createdAt: { type: Date, default: Date.now },
 });
 
