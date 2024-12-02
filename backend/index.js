@@ -73,6 +73,14 @@ app.delete('/slideshows/:id', refreshTokenMiddleware, (req, res) => {
   uploadController.deleteSlideshow(req, res, oauthController.oauth2Client);
 });
 
+app.get('/gallery', refreshTokenMiddleware, (req, res) => {
+  uploadController.getAllGalleryImages(req, res, oauthController.oauth2Client);
+});
+
+app.post('/addgallery', refreshTokenMiddleware, (req, res) => {
+  uploadController.addGalleryImage(req, res, oauthController.oauth2Client);
+});
+
 
 // app.get('/photos/:photoId',refreshTokenMiddleware, (req, res) => {
 //   uploadController.getPhotoDetails(req, res, oauth2Client);

@@ -7,6 +7,7 @@ import Dashboard from './components/Dashboard';
 import Upload from './components/Upload'; 
 import Profile from './components/Profile'; 
 import Slideshow from './components/Slideshow'; 
+import Gallery from './components/Gallery'; 
 import axios from 'axios';
 
 const App = () => {
@@ -84,6 +85,7 @@ const App = () => {
             <Route path="/upload" element={isAuthenticated ? <Upload /> : <Navigate to="/" />} /> 
             <Route path="/profile" element={isAuthenticated ? <Profile /> : <Navigate to="/" />} />
             <Route path="/slideshow" element={isAuthenticated ? <Slideshow /> : <Navigate to="/" />} />
+            <Route path="/gallery" element={isAuthenticated ? <Gallery /> : <Navigate to="/gallery" />} />
           </Routes>
         )}
       </div>

@@ -3,8 +3,10 @@ const fs = require('fs');
 const { VisionServiceClient } = require('@google-cloud/vision');
 const Photo = require('../models/PhotoSchema'); // Import the Photo model
 const Slideshow = require('../models/SlideshowSchema'); // Import the Photo model
+const Gallery = require('../models/GallerySchema'); // Import the Photo model
 const { v4: uuidv4 } = require('uuid');
 const { google } = require('googleapis');
+
 // exports.uploadPhotos = async (req, res, oauth2Client) => {
 //   const files = req.files;
 //   const customTags = JSON.parse(req.body.customTags || '[]');
@@ -204,18 +206,15 @@ exports.uploadPhotos = async (req, res, oauth2Client) => {
 };
 
 exports.getGooglePhotos = async (req, res, oauth2Client) => {
+  const { fromDate, toDate, location } = req.query;
+
   if (!oauth2Client.credentials.access_token) {
     return res.status(401).send('Unauthorized: No access token provided');
   }
 
-  const { location } = req.query; // No date filters applied here
-
   try {
     const photosUrl = 'https://photoslibrary.googleapis.com/v1/mediaItems:search';
     const headers = { Authorization: `Bearer ${oauth2Client.credentials.access_token}` };
-
-    // Prepare empty filters as we're not limiting by date anymore
-    let filters = {};
 
     let allPhotos = [];
     let pageToken = null;
@@ -229,11 +228,27 @@ exports.getGooglePhotos = async (req, res, oauth2Client) => {
     });
     const ownerEmail = userInfoResponse.data.email; // Get authenticated user's email
 
+    // Prepare filters for Google Photos API search
+    const filters = {
+      dateFilter: {},
+    };
+
+    if (fromDate || toDate) {
+      filters.dateFilter = {
+        ranges: [
+          {
+            startDate: fromDate ? { year: parseInt(fromDate.split('-')[0]), month: parseInt(fromDate.split('-')[1]), day: parseInt(fromDate.split('-')[2]) } : undefined,
+            endDate: toDate ? { year: parseInt(toDate.split('-')[0]), month: parseInt(toDate.split('-')[1]), day: parseInt(toDate.split('-')[2]) } : undefined,
+          },
+        ],
+      };
+    }
+
     // Loop to fetch all pages
     do {
       const response = await axios.post(
         photosUrl,
-        { filters, pageToken, pageSize: 100 }, // Max page size (100)
+        { filters, pageToken, pageSize: 100 },
         { headers }
       );
 
@@ -242,7 +257,22 @@ exports.getGooglePhotos = async (req, res, oauth2Client) => {
 
       const filteredPhotos = photos
         .filter(photo => photo.mediaMetadata?.creationTime)
-        .filter(photo => !location || (photo.location && photo.location.includes(location))); // Optionally filter by location
+        .filter(photo => {
+          // Filter by location if provided
+          if (location) {
+            const photoLocation = photo.location?.description || '';
+            return photoLocation.toLowerCase().includes(location.toLowerCase());
+          }
+          return true; // Pass all photos if no location filter
+        })
+        .filter(photo => {
+          // Additional filtering based on fromDate and toDate
+          const photoDate = new Date(photo.mediaMetadata.creationTime);
+          const startDate = fromDate ? new Date(fromDate) : null;
+          const endDate = toDate ? new Date(toDate) : null;
+
+          return (!startDate || photoDate >= startDate) && (!endDate || photoDate <= endDate);
+        });
 
       // Save photo details to the database and prepare response data
       const photoDetails = await Promise.all(filteredPhotos.map(async (photo) => {
@@ -288,7 +318,7 @@ exports.getGooglePhotos = async (req, res, oauth2Client) => {
 
     } while (pageToken); // Continue until there are no more pages
 
-    res.json(allPhotos); // Send all photos back as the response
+    res.json(allPhotos); // Send all filtered photos back as the response
   } catch (error) {
     console.error('Error fetching photos:', error);
     res.status(500).json({ error: 'Failed to fetch photos from Google Photos API' });
@@ -297,12 +327,13 @@ exports.getGooglePhotos = async (req, res, oauth2Client) => {
 
 
 
+
 // exports.getGooglePhotos = async (req, res, oauth2Client) => {
 //   if (!oauth2Client.credentials.access_token) {
 //     return res.status(401).send('Unauthorized: No access token provided');
 //   }
 
-//   const { fromDate, toDate, location } = req.query;
+  // const { fromDate, toDate, location } = req.query;
 
 //   try {
 //     const photosUrl = 'https://photoslibrary.googleapis.com/v1/mediaItems:search';
@@ -970,3 +1001,29 @@ exports.deleteSlideshow = async (req, res) => {
 //   }
 // };
 
+exports.getAllGalleryImages = async (req, res) => {
+  try {
+    const galleryImages = await Gallery.find();
+    res.status(200).json({ galleryImages });
+  } catch (error) {
+    console.error('Error fetching gallery images:', error);
+    res.status(500).json({ error: 'Failed to fetch gallery images.' });
+  }
+};
+
+exports.addGalleryImage = async (req, res) => {
+  const { title, description, imageUrl } = req.body;
+
+  if (!title || !description || !imageUrl) {
+    return res.status(400).json({ error: 'Title, description, and image URL are required.' });
+  }
+
+  try {
+    const newGalleryImage = new Gallery({ title, description, imageUrl });
+    await newGalleryImage.save();
+    res.status(201).json({ message: 'Gallery image added successfully.', galleryImage: newGalleryImage });
+  } catch (error) {
+    console.error('Error adding gallery image:', error);
+    res.status(500).json({ error: 'Failed to add gallery image.' });
+  }
+};

@@ -4,8 +4,10 @@ import FilterModal from './DateFilter';
 import ImageViewer from './ImageViewer';
 import { format, isToday, isYesterday, parseISO } from 'date-fns';
 import searchIcon from '../assets/images/search.svg';
+import filterIcon from '../assets/images/filter.svg';
 import { faStar } from '@fortawesome/free-regular-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+
 
 const Dashboard = () => {
   const [photos, setPhotos] = useState([]);
@@ -22,6 +24,7 @@ const Dashboard = () => {
   const [slideshowSearchResults, setSlideshowSearchResults] = useState([]); // Search results for slideshow modal
 
   const fetchPhotos = async (fromDate, toDate, location) => {
+    console.log('Fetching photos with:', { fromDate, toDate, location });
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -223,7 +226,7 @@ const Dashboard = () => {
           href="#"
           onClick={(e) => {
             e.preventDefault();
-            setIsSlideshowModalOpen(true); 
+            setIsSlideshowModalOpen(true);
           }}
           className="flex items-center space-x-1 text-gray-700 text-base absolute right-[113px] top-[28px]"
         >
@@ -233,6 +236,17 @@ const Dashboard = () => {
       </div>
 
       {errorMessage && <p className="text-red-500">{errorMessage}</p>}
+      <button
+        onClick={() => setIsModalOpen(true)}
+        className="px-4 py-2 text-lg text-gray-800 relative right-[-53rem] top-[-131px]  flex items-center"
+      >
+        <img
+          src={filterIcon} // Replace with the actual path to your image
+          alt="Filter Icon"
+          className="w-8 h-8"
+        />
+        Filter
+      </button>
 
       <FilterModal
         isOpen={isModalOpen}
@@ -240,7 +254,7 @@ const Dashboard = () => {
         onApply={handleFilterApply}
       />
 
-      <div className="relative w-[57rem] absolute top-[-130px]">
+      <div className="relative w-[50rem] absolute top-[-173px]">
         <input
           type="text"
           value={searchTerm}
@@ -296,77 +310,77 @@ const Dashboard = () => {
         ))
       )}
 
-{isSlideshowModalOpen && (
-  <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
-    <div className="bg-white p-8 rounded-xl shadow-xl max-w-4xl w-full relative">
-      
-      {/* Close Button */}
-      <button
-        onClick={() => setIsSlideshowModalOpen(false)}
-        className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 focus:outline-none text-2xl"
-      >
-        &times;
-      </button>
+      {isSlideshowModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
+          <div className="bg-white p-8 rounded-xl shadow-xl max-w-4xl w-full relative">
 
-      <h2 className="text-2xl font-semibold mb-6 text-gray-900">Create Slideshow</h2>
-      
-      {/* Slideshow Name Input */}
-      <input
-        type="text"
-        value={slideshowName}
-        onChange={(e) => setSlideshowName(e.target.value)}
-        placeholder="Enter slideshow name"
-        className="w-full p-3 mb-6 text-lg rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-      />
+            {/* Close Button */}
+            <button
+              onClick={() => setIsSlideshowModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 focus:outline-none text-2xl"
+            >
+              &times;
+            </button>
 
-      {/* Search Bar */}
-      <div className="relative mb-6">
-        <input
-          type="text"
-          value={slideshowSearchTerm}
-          onChange={(e) => setSlideshowSearchTerm(e.target.value)}
-          onKeyPress={handleSearchInSlideshowModal}
-          placeholder="Search photos..."
-          className="w-full bg-[#f8f9fa] text-gray-700 pl-12 pr-4 py-3 rounded-full shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <img src={searchIcon} alt="Search" className="absolute left-4 top-3 w-5 h-5 text-gray-500" />
-      </div>
+            <h2 className="text-2xl font-semibold mb-6 text-gray-900">Create Slideshow</h2>
 
-      {/* Photo Grid */}
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4 max-h-64 overflow-y-auto">
-        {slideshowSearchResults.length > 0
-          ? slideshowSearchResults.map((photo) => (
-              <div
-                key={photo.id}
-                className={`border rounded-lg shadow-md overflow-hidden cursor-pointer transition-transform duration-300 transform hover:scale-105 ${selectedPhotos.includes(photo.id) ? 'border-blue-500 border-4' : ''}`}
-                onClick={() => togglePhotoSelection(photo.id)}
+            {/* Slideshow Name Input */}
+            <input
+              type="text"
+              value={slideshowName}
+              onChange={(e) => setSlideshowName(e.target.value)}
+              placeholder="Enter slideshow name"
+              className="w-full p-3 mb-6 text-lg rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+
+            {/* Search Bar */}
+            <div className="relative mb-6">
+              <input
+                type="text"
+                value={slideshowSearchTerm}
+                onChange={(e) => setSlideshowSearchTerm(e.target.value)}
+                onKeyPress={handleSearchInSlideshowModal}
+                placeholder="Search photos..."
+                className="w-full bg-[#f8f9fa] text-gray-700 pl-12 pr-4 py-3 rounded-full shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <img src={searchIcon} alt="Search" className="absolute left-4 top-3 w-5 h-5 text-gray-500" />
+            </div>
+
+            {/* Photo Grid */}
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4 max-h-64 overflow-y-auto">
+              {slideshowSearchResults.length > 0
+                ? slideshowSearchResults.map((photo) => (
+                  <div
+                    key={photo.id}
+                    className={`border rounded-lg shadow-md overflow-hidden cursor-pointer transition-transform duration-300 transform hover:scale-105 ${selectedPhotos.includes(photo.id) ? 'border-blue-500 border-4' : ''}`}
+                    onClick={() => togglePhotoSelection(photo.id)}
+                  >
+                    <img src={photo.url} alt={photo.filename} className="w-full h-40 object-cover" />
+                  </div>
+                ))
+                : photos.map((photo) => (
+                  <div
+                    key={photo.id}
+                    className={`border rounded-lg shadow-md overflow-hidden cursor-pointer transition-transform duration-300 transform hover:scale-105 ${selectedPhotos.includes(photo.id) ? 'border-blue-500 border-4' : ''}`}
+                    onClick={() => togglePhotoSelection(photo.id)}
+                  >
+                    <img src={photo.url} alt={photo.filename} className="w-full h-40 object-cover" />
+                  </div>
+                ))}
+            </div>
+
+            {/* Save Button */}
+            <div className="mt-6 flex justify-end gap-4">
+              <button
+                onClick={saveSlideshow}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg text-lg font-semibold hover:bg-blue-700 transition"
               >
-                <img src={photo.url} alt={photo.filename} className="w-full h-40 object-cover" />
-              </div>
-            ))
-          : photos.map((photo) => (
-              <div
-                key={photo.id}
-                className={`border rounded-lg shadow-md overflow-hidden cursor-pointer transition-transform duration-300 transform hover:scale-105 ${selectedPhotos.includes(photo.id) ? 'border-blue-500 border-4' : ''}`}
-                onClick={() => togglePhotoSelection(photo.id)}
-              >
-                <img src={photo.url} alt={photo.filename} className="w-full h-40 object-cover" />
-              </div>
-            ))}
-      </div>
-
-      {/* Save Button */}
-      <div className="mt-6 flex justify-end gap-4">
-        <button
-          onClick={saveSlideshow}
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg text-lg font-semibold hover:bg-blue-700 transition"
-        >
-          Save
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
 
       {photos.length === 0 && !errorMessage && (
