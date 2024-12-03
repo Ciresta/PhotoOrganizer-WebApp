@@ -81,6 +81,11 @@ app.post('/addgallery', refreshTokenMiddleware, (req, res) => {
   uploadController.addGalleryImage(req, res, oauthController.oauth2Client);
 });
 
+app.post('/deletegallery', refreshTokenMiddleware, (req, res) => {
+  uploadController.deleteGalleryImage(req, res, oauthController.oauth2Client);
+});
+
+app.get('/getgallery/:email',uploadController.getImagesByEmail);
 
 // app.get('/photos/:photoId',refreshTokenMiddleware, (req, res) => {
 //   uploadController.getPhotoDetails(req, res, oauth2Client);

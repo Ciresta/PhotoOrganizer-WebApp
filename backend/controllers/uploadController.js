@@ -1001,9 +1001,25 @@ exports.deleteSlideshow = async (req, res) => {
 //   }
 // };
 
-exports.getAllGalleryImages = async (req, res) => {
+exports.getAllGalleryImages = async (req, res, oauth2Client) => {
   try {
-    const galleryImages = await Gallery.find();
+    // Ensure oauth2Client is provided and valid
+    if (!oauth2Client || !oauth2Client.credentials?.access_token) {
+      return res.status(401).json({ error: 'Unauthorized: No access token provided.' });
+    }
+
+    // Fetch the logged-in user's email
+    const oauth2 = google.oauth2({ auth: oauth2Client, version: 'v2' });
+    const userInfo = await oauth2.userinfo.get();
+    const ownerEmail = userInfo.data.email; // Logged-in user's email
+
+    if (!ownerEmail) {
+      return res.status(403).json({ error: 'Unable to fetch user information.' });
+    }
+
+    // Find gallery images owned by the logged-in user
+    const galleryImages = await Gallery.find({ ownerName: ownerEmail });
+
     res.status(200).json({ galleryImages });
   } catch (error) {
     console.error('Error fetching gallery images:', error);
@@ -1011,19 +1027,95 @@ exports.getAllGalleryImages = async (req, res) => {
   }
 };
 
-exports.addGalleryImage = async (req, res) => {
-  const { title, description, imageUrl } = req.body;
+exports.addGalleryImage = async (req, res, oauth2Client) => {
+  const { photos } = req.body;
 
-  if (!title || !description || !imageUrl) {
-    return res.status(400).json({ error: 'Title, description, and image URL are required.' });
+  if (!photos || !Array.isArray(photos) || photos.length === 0) {
+    return res.status(400).json({ error: 'No photos provided.' });
   }
 
   try {
-    const newGalleryImage = new Gallery({ title, description, imageUrl });
-    await newGalleryImage.save();
-    res.status(201).json({ message: 'Gallery image added successfully.', galleryImage: newGalleryImage });
+    // Ensure oauth2Client is provided and valid
+    if (!oauth2Client || !oauth2Client.credentials?.access_token) {
+      return res.status(401).json({ error: 'Unauthorized: No access token provided.' });
+    }
+
+    // Fetch the user's email
+    const oauth2 = google.oauth2({ auth: oauth2Client, version: 'v2' });
+    const userInfo = await oauth2.userinfo.get();
+    const ownerEmail = userInfo.data.email; // Get the authenticated user's email
+
+    if (!ownerEmail) {
+      return res.status(403).json({ error: 'Unable to fetch user information.' });
+    }
+
+    // Map the photos with additional owner information
+    const sanitizedPhotos = photos.map((photo) => ({
+      title: photo.title || 'Untitled', // Default title if not provided
+      description: photo.description || 'No description provided', // Default description
+      imageUrl: photo.imageUrl, // Validate image URL
+      ownerName: ownerEmail, // Attach owner's email
+    }));
+
+    // Save to the database
+    const newPhotos = await Gallery.insertMany(sanitizedPhotos);
+    res.status(201).json({ message: 'Photos added successfully.', newPhotos });
   } catch (error) {
-    console.error('Error adding gallery image:', error);
-    res.status(500).json({ error: 'Failed to add gallery image.' });
+    console.error('Error adding photos:', error);
+    res.status(500).json({ error: 'Failed to add photos.' });
+  }
+};
+
+exports.deleteGalleryImage = async (req, res) => {
+  const { imageUrl } = req.body;
+
+  // Check if the imageUrl is provided
+  if (!imageUrl) {
+    console.error('No imageUrl provided');
+    return res.status(400).json({ message: 'imageUrl is required' });
+  }
+
+  try {
+    console.log('Attempting to delete image with URL:', imageUrl);
+
+    // Use the correct model
+    const deletedImage = await Gallery.findOneAndDelete({ imageUrl });
+
+    if (!deletedImage) {
+      console.error('Image not found in database:', imageUrl);
+      return res.status(404).json({ message: 'Image not found', imageUrl });
+    }
+
+    console.log('Image deleted successfully:', deletedImage);
+    res.json({ message: 'Image deleted successfully', deletedImage });
+  } catch (error) {
+    console.error('Error deleting image:', error.message);
+    res.status(500).json({ message: 'Failed to delete image', error: error.message });
+  }
+};
+
+
+exports.getImagesByEmail = async (req, res) => {
+  const { email } = req.params; // Extract email from the request params
+
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required.' });
+  }
+
+  try {
+    // Find all images where ownerName matches the provided email
+    const galleryImages = await Gallery.find({ ownerName: email });
+
+    if (!galleryImages || galleryImages.length === 0) {
+      return res.status(404).json({ error: 'No images found for the given email.' });
+    }
+
+    // Map the gallery images to only return the image URLs
+    const imageUrls = galleryImages.map((image) => image.imageUrl);
+
+    res.status(200).json({ imageUrls });
+  } catch (error) {
+    console.error('Error fetching images by email:', error);
+    res.status(500).json({ error: 'Failed to fetch images for the given email.' });
   }
 };
