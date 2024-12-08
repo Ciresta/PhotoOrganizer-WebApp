@@ -13,7 +13,7 @@ const ImageViewer = ({ photo, onClose }) => {
     console.log(`Removing tag: ${tag}`);
 
     try {
-      const response = await axios.delete('http://localhost:5000/deletetags', {
+      const response = await axios.delete('https://photo-org-app.onrender.com/deletetags', {
         data: {  // Using data for DELETE request body
           tagName: tag,
           googlePhotoId: photo.id, // Pass googlePhotoId directly
@@ -30,7 +30,7 @@ const ImageViewer = ({ photo, onClose }) => {
 
   const handleAddTag = async () => {
     try {
-      const response = await axios.post('http://localhost:5000/addtags', {
+      const response = await axios.post('https://photo-org-app.onrender.com/addtags', {
         tagName: newTag,
         googlePhotoId: photo.id, // Pass googlePhotoId directly
       });

@@ -33,7 +33,7 @@ const Dashboard = () => {
         return;
       }
 
-      const response = await axios.get('http://localhost:5000/photos', {
+      const response = await axios.get('https://photo-org-app.onrender.com/photos', {
         params: {
           fromDate: fromDate || undefined,
           toDate: toDate || undefined,
@@ -97,7 +97,7 @@ const Dashboard = () => {
           return;
         }
 
-        const response = await axios.post('http://localhost:5000/searchPhotos', {
+        const response = await axios.post('https://photo-org-app.onrender.com/searchPhotos', {
           searchTerm,
         }, {
           headers: {
@@ -107,7 +107,7 @@ const Dashboard = () => {
 
         const resultsWithCorrectUrls = response.data.map((photo) => ({
           ...photo,
-          url: photo.url.includes('http') ? photo.url : `http://localhost:5000/${photo.url}`,
+          url: photo.url.includes('http') ? photo.url : `https://photo-org-app.onrender.com/${photo.url}`,
         }));
 
         setSearchResults(resultsWithCorrectUrls);
@@ -132,7 +132,7 @@ const Dashboard = () => {
           return;
         }
 
-        const response = await axios.post('http://localhost:5000/searchPhotos', {
+        const response = await axios.post('https://photo-org-app.onrender.com/searchPhotos', {
           searchTerm: slideshowSearchTerm,
         }, {
           headers: {
@@ -142,7 +142,7 @@ const Dashboard = () => {
 
         const resultsWithCorrectUrls = response.data.map((photo) => ({
           ...photo,
-          url: photo.url.includes('http') ? photo.url : `http://localhost:5000/${photo.url}`,
+          url: photo.url.includes('http') ? photo.url : `https://photo-org-app.onrender.com/${photo.url}`,
         }));
 
         setSlideshowSearchResults(resultsWithCorrectUrls);
@@ -169,7 +169,7 @@ const Dashboard = () => {
       }
 
       const response = await axios.post(
-        'http://localhost:5000/slideshows',
+        'https://photo-org-app.onrender.com/slideshows',
         { name: slideshowName, photoIds: selectedPhotos },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -192,7 +192,7 @@ const Dashboard = () => {
     }
 
     try {
-      const response = await axios.get(`http://localhost:5000/photos/${photoId}`, {
+      const response = await axios.get(`https://photo-org-app.onrender.com/photos/${photoId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

@@ -103,7 +103,7 @@ const Upload = () => {
       const tagsArray = uploadedFiles.map(file => file.customTags);
       formData.append('customTags', JSON.stringify(tagsArray));
 
-      const response = await axios.post('http://localhost:5000/add', formData, {
+      const response = await axios.post('https://photo-org-app.onrender.com/add', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

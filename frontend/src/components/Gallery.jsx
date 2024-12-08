@@ -22,7 +22,7 @@ const CreateGallery = () => {
           return;
         }
 
-        const response = await axios.get('http://localhost:5000/gallery', {
+        const response = await axios.get('https://photo-org-app.onrender.com/gallery', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -49,7 +49,7 @@ const CreateGallery = () => {
             return;
           }
 
-          const response = await axios.get('http://localhost:5000/photos', {
+          const response = await axios.get('https://photo-org-app.onrender.com/photos', {
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -86,7 +86,7 @@ const CreateGallery = () => {
         }
 
         const response = await axios.post(
-          'http://localhost:5000/searchPhotos',
+          'https://photo-org-app.onrender.com/searchPhotos',
           { searchTerm },
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -95,7 +95,7 @@ const CreateGallery = () => {
         const resultsWithCorrectUrls = response.data
           .map((photo) => ({
             ...photo,
-            url: photo.url.includes('http') ? photo.url : `http://localhost:5000/${photo.url}`,
+            url: photo.url.includes('http') ? photo.url : `https://photo-org-app.onrender.com/${photo.url}`,
           }))
           .filter((photo) => !galleryImageUrls.includes(photo.url));
 
@@ -134,7 +134,7 @@ const CreateGallery = () => {
       }
 
       await axios.post(
-        'http://localhost:5000/addgallery',
+        'https://photo-org-app.onrender.com/addgallery',
         { photos: photosToSave },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -158,7 +158,7 @@ const CreateGallery = () => {
       }
 
       await axios.post(
-        'http://localhost:5000/deletegallery',
+        'https://photo-org-app.onrender.com/deletegallery',
         { imageUrl },
         { headers: { Authorization: `Bearer ${token}` } }
       );

@@ -37,7 +37,7 @@ const App = () => {
 
   const fetchUserData = async (token) => {
     try {
-      const response = await axios.get('http://localhost:5000/user/profile', {
+      const response = await axios.get('https://photo-org-app.onrender.com/user/profile', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -52,7 +52,7 @@ const App = () => {
   const handleSignIn = async () => {
     setLoading(true); 
     try {
-      const response = await axios.get('http://localhost:5000/auth/google');
+      const response = await axios.get('https://photo-org-app.onrender.com/auth/google');
       const googleAuthUrl = response.data.authUrl;
       window.location.href = googleAuthUrl; 
     } catch (error) {

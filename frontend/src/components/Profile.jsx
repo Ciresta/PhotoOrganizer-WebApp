@@ -8,7 +8,7 @@ const Profile = () => {
 
   const fetchUserData = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/user/profile');
+      const response = await axios.get('https://photo-org-app.onrender.com/user/profile');
       setUser(response.data); // Store user data in state
       setLoading(false); // Set loading to false
     } catch (error) {
@@ -23,7 +23,7 @@ const Profile = () => {
 
   const handleSignOut = () => {
     // Function to handle Google sign out
-    window.location.href = 'http://localhost:5000/auth/google/logout';
+    window.location.href = 'https://photo-org-app.onrender.com/auth/google/logout';
   };
 
   if (loading) {

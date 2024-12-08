@@ -22,7 +22,7 @@ const Slideshow = () => {
           return;
         }
 
-        const response = await axios.get('http://localhost:5000/displayslideshows', {
+        const response = await axios.get('https://photo-org-app.onrender.com/displayslideshows', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -59,7 +59,7 @@ const Slideshow = () => {
 
     try {
       setDeletionStatus('Deleting...');
-      const response = await axios.delete(`http://localhost:5000/slideshows/${selectedSlideshowId}`, {
+      const response = await axios.delete(`https://photo-org-app.onrender.com/slideshows/${selectedSlideshowId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
