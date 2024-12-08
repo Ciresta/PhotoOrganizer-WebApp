@@ -33,7 +33,7 @@ exports.handleAuthCallback = async (req, res) => {
     const { tokens } = await oauth2Client.getToken(code);
     oauth2Client.setCredentials(tokens);
     console.log('Tokens:', tokens);
-    res.redirect(`https://photo-org-app.onrender.com?token=${tokens.access_token}`);
+    res.redirect(`https://photoorganizer.netlify.app?token=${tokens.access_token}`);
   } catch (error) {
     console.error('Error during OAuth callback:', error);
     res.status(500).send('Authentication error');
