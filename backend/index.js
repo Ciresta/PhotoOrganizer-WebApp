@@ -12,7 +12,7 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 app.use(cors({
-  origin: 'https://photoorganizer.netlify.app/', 
+  origin: 'https://photoorganizer.netlify.app',  // Remove trailing slash
   credentials: true
 }));
 
