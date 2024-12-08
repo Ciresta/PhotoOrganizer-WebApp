@@ -1,7 +1,8 @@
 // db.js
 const mongoose = require('mongoose');
+require('dotenv').config();
 
-const uri = "mongodb://localhost:27017/photo_app"; // Adjust URI as needed for MongoDB Atlas or local
+const uri = process.env.MONGODB_URI;
 
 async function connectToDatabase() {
   try {
