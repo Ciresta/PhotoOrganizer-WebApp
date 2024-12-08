@@ -52,7 +52,7 @@ const App = () => {
   const handleSignIn = async () => {
     setLoading(true); 
     try {
-      const response = await axios.get('https://photo-org-app.onrender.com/auth/google');
+      const response = await axios.get('https://photoorganizer.netlify.app/auth/google');
       const googleAuthUrl = response.data.authUrl;
       window.location.href = googleAuthUrl; 
     } catch (error) {
