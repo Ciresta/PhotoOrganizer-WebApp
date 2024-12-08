@@ -91,6 +91,8 @@ app.get('/getgallery/:email',uploadController.getImagesByEmail);
 //   uploadController.getPhotoDetails(req, res, oauth2Client);
 // });
 
+// okok
+
 // app.get('/photoByFilename',refreshTokenMiddleware, (req, res) => {
 //   uploadController.getPhotoByFileName(req, res, oauth2Client);
 // });
