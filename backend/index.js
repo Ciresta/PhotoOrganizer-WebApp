@@ -11,9 +11,24 @@ const connectToDatabase = require('./config/db');
 const app = express();
 const port = process.env.PORT || 5000;
 
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://127.0.0.1:5500', // Add any other domains here
+  'https://photoorganizer.netlify.app',
+  'https://www.gmu.ac.in/'
+];
+
 app.use(cors({
-  origin: 'https://photoorganizer.netlify.app',  // Remove trailing slash
-  credentials: true
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      // Allow this origin
+      callback(null, true);
+    } else {
+      // Block the request
+      callback(new Error('Not allowed by CORS'), false);
+    }
+  },
+  credentials: true, // Allow credentials (cookies, authentication headers, etc.)
 }));
 
 app.use('/public', express.static(path.join(__dirname, 'public')));
@@ -79,6 +94,10 @@ app.get('/gallery', refreshTokenMiddleware, (req, res) => {
 
 app.post('/addgallery', refreshTokenMiddleware, (req, res) => {
   uploadController.addGalleryImage(req, res, oauthController.oauth2Client);
+});
+
+app.get('/getslideshow/:slideshowId', (req, res) => {
+  uploadController.displaySlideshowById(req, res);
 });
 
 app.post('/deletegallery', refreshTokenMiddleware, (req, res) => {

@@ -1094,6 +1094,39 @@ exports.deleteGalleryImage = async (req, res) => {
   }
 };
 
+exports.displaySlideshowById = async (req, res) => {
+  try {
+    const { slideshowId } = req.params;
+    const { minimal } = req.query;
+
+    if (!slideshowId) {
+      return res.status(400).json({ error: 'Slideshow ID is required.' });
+    }
+
+    const slideshow = await Slideshow.findOne({ slideshowId });
+    if (!slideshow) {
+      return res.status(404).json({ error: 'Slideshow not found.' });
+    }
+
+    if (minimal === 'true') {
+      // Return only the photoUrls for minimal response
+      return res.status(200).json({ photoUrls: slideshow.photoUrls });
+    }
+
+    res.status(200).json({
+      slideshow: {
+        slideshowId: slideshow.slideshowId,
+        name: slideshow.name,
+        createdAt: slideshow.createdAt,
+        photoUrls: slideshow.photoUrls,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching slideshow:', error);
+    res.status(500).json({ error: 'Failed to fetch slideshow' });
+  }
+};
+
 
 exports.getImagesByEmail = async (req, res) => {
   const { email } = req.params; // Extract email from the request params
