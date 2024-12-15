@@ -7,11 +7,12 @@ const Slideshow = () => {
   const [slideshows, setSlideshows] = useState([]);
   const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(true);
-  const [isDeleting, setIsDeleting] = useState(false); // To show confirmation modal
-  const [selectedSlideshowId, setSelectedSlideshowId] = useState(null); // Store the selected slideshow ID for deletion
-  const [deletionStatus, setDeletionStatus] = useState(''); // To handle success/failure feedback
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedSlideshowId, setSelectedSlideshowId] = useState(null);
+  const [deletionStatus, setDeletionStatus] = useState('');
+  const [showEmbedInstructions, setShowEmbedInstructions] = useState(false);
+  const [embedLink, setEmbedLink] = useState('');
 
-  // Fetch slideshows from the API
   useEffect(() => {
     const fetchSlideshows = async () => {
       try {
@@ -22,7 +23,7 @@ const Slideshow = () => {
           return;
         }
 
-        const response = await axios.get('https://photo-org-app.onrender.com/displayslideshows', {
+        const response = await axios.get('http://localhost:5000/displayslideshows', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -40,9 +41,11 @@ const Slideshow = () => {
   }, []);
 
   const getSlideshowLink = (slideshowId) => {
-    const baseUrl = `${window.location.origin}/slideshow/${slideshowId}`;
-    navigator.clipboard.writeText(baseUrl);
-    alert('Link copied to clipboard!');
+    // Just pass the slideshowId instead of the full URL
+    const baseLink = slideshowId; // e.g., 'workshop-79fd498a'
+    navigator.clipboard.writeText(baseLink); // Copy only the slideshowId to clipboard
+    setEmbedLink(baseLink); // Set the slideshowId as the embed link
+    setShowEmbedInstructions(true); // Show the embed instructions modal
   };
 
   const deleteSlideshow = async () => {
@@ -59,32 +62,29 @@ const Slideshow = () => {
 
     try {
       setDeletionStatus('Deleting...');
-      const response = await axios.delete(`https://photo-org-app.onrender.com/slideshows/${selectedSlideshowId}`, {
+      const response = await axios.delete(`http://localhost:5000/slideshows/${selectedSlideshowId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      console.log('Response after delete:', response.data);
-
-      // Remove the deleted slideshow from the state
       setSlideshows((prevSlideshows) =>
         prevSlideshows.filter((slideshow) => slideshow.slideshowId !== selectedSlideshowId)
       );
 
-      setIsDeleting(false); // Close confirmation modal
-      setSelectedSlideshowId(null); // Reset selected slideshow
+      setIsDeleting(false);
+      setSelectedSlideshowId(null);
       setDeletionStatus('Slideshow deleted successfully!');
       setTimeout(() => {
         setDeletionStatus('');
-      }, 3000); // Reset after 3 seconds
+      }, 3000);
     } catch (error) {
       console.error('Error deleting slideshow:', error);
       setDeletionStatus('Failed to delete slideshow. Please try again.');
       setTimeout(() => {
         setDeletionStatus('');
-      }, 3000); // Reset after 3 seconds
-      setIsDeleting(false); // Close confirmation modal
+      }, 3000);
+      setIsDeleting(false);
     }
   };
 
@@ -115,24 +115,23 @@ const Slideshow = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {slideshows.map((slideshow) => (
           <div
-            key={slideshow.slideshowId}  // Use slideshowId for unique key
+            key={slideshow.slideshowId}
             className="slideshow-card bg-white rounded-lg shadow-md overflow-hidden transition-transform transform hover:scale-105"
           >
-            {/* Header Section */}
             <div className="bg-gradient-to-r from-blue-500 to-purple-500 text-white p-4 flex justify-between items-center">
               <h2 className="text-xl md:text-2xl font-bold">{slideshow.name}</h2>
               <div className="flex gap-2">
                 <button
                   className="bg-white text-blue-500 py-2 px-4 rounded-full flex items-center gap-2 shadow hover:shadow-md hover:bg-blue-100 transition"
-                  onClick={() => getSlideshowLink(slideshow.slideshowId)}  // Use slideshowId here
+                  onClick={() => getSlideshowLink(slideshow.slideshowId)}
                 >
                   <FaLink /> Get Link
                 </button>
                 <button
                   className="bg-red-500 text-white py-2 px-4 rounded-full flex items-center gap-2 shadow hover:shadow-md hover:bg-red-600 transition"
                   onClick={() => {
-                    setSelectedSlideshowId(slideshow.slideshowId);  // Ensure this sets the correct ID for deletion
-                    setIsDeleting(true); // Show confirmation modal
+                    setSelectedSlideshowId(slideshow.slideshowId);
+                    setIsDeleting(true);
                   }}
                 >
                   <FaTrash /> Delete
@@ -140,7 +139,6 @@ const Slideshow = () => {
               </div>
             </div>
 
-            {/* Carousel Section */}
             <div className="p-4">
               <Slider {...sliderSettings}>
                 {slideshow.photoUrls?.length > 0 ? (
@@ -172,17 +170,40 @@ const Slideshow = () => {
             <div className="flex gap-4">
               <button
                 className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
-                onClick={deleteSlideshow} // Directly call delete function
+                onClick={deleteSlideshow}
               >
                 Yes, Delete
               </button>
               <button
                 className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
-                onClick={() => setIsDeleting(false)} // Close confirmation modal
+                onClick={() => setIsDeleting(false)}
               >
                 Cancel
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Embed Instructions Modal */}
+      {showEmbedInstructions && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+            <h3 className="text-lg font-semibold mb-4">How to Embed This Slideshow</h3>
+            <p className="mb-4">You can embed this slideshow on your website using the following HTML code:</p>
+            <pre className="bg-gray-100 p-4 rounded-lg text-sm overflow-auto">
+              {`<script src="https://photoorganizer.netlify.app/embed.js"></script>
+<div id="carousel-container" style="width: 100%; max-width: 800px; margin: auto;"></div>
+<script>
+    window.initSlideshow('${embedLink}', 'carousel-container');
+</script>`}
+            </pre>
+            <button
+              className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 mt-4"
+              onClick={() => setShowEmbedInstructions(false)}
+            >
+              Close
+            </button>
           </div>
         </div>
       )}
