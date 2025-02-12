@@ -16,7 +16,7 @@ const allowedOrigins = [
   'http://127.0.0.1:5500', // Add any other domains here
   'https://photoorganizer.netlify.app',
   'https://www.gmu.ac.in/',
-  'http://127.0.0.1:5501',
+  // 'http://127.0.0.1:5501',
 ];
 
 app.use(cors({
