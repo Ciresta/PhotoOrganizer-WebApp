@@ -8,13 +8,15 @@ const Upload = () => {
   const [successPopupVisible, setSuccessPopupVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [tagInputs, setTagInputs] = useState([]); // State for individual tag inputs
-  const [groupTags, setGroupTags] = useState(''); // State for group tags
+  const [tagInputs, setTagInputs] = useState([]);
+  const [groupTags, setGroupTags] = useState('');
 
   const handleFileChange = (e) => {
-    const selectedFiles = Array.from(e.target.files);
+    const selectedFiles = Array.from(e.target.files).filter(file => file.type.startsWith('image/'));
     if (selectedFiles.length > 0) {
       addFilesToUploaded(selectedFiles);
+    } else {
+      setErrorMessage("Please select only image files.");
     }
   };
 
@@ -22,9 +24,11 @@ const Upload = () => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
-    const files = Array.from(e.dataTransfer.files);
+    const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
     if (files.length > 0) {
       addFilesToUploaded(files);
+    } else {
+      setErrorMessage("Please drop only image files.");
     }
   }, []);
 
@@ -39,16 +43,22 @@ const Upload = () => {
   };
 
   const addFilesToUploaded = (selectedFiles) => {
-    const newFiles = selectedFiles.map((file) => ({
+    const imageFiles = selectedFiles.filter(file => file.type.startsWith('image/'));
+    if (imageFiles.length === 0) {
+      setErrorMessage("No valid image files selected.");
+      return;
+    }
+
+    const newFiles = imageFiles.map((file) => ({
       name: file.name,
       size: file.size,
       type: file.type,
       file: file,
-      preview: URL.createObjectURL(file), // Create a preview URL for the image
-      customTags: [], // Initialize custom tags for each file
+      preview: URL.createObjectURL(file),
+      customTags: [],
     }));
     setUploadedFiles((prev) => [...prev, ...newFiles]);
-    setTagInputs((prev) => [...prev, ""]); // Initialize tag input for each new file
+    setTagInputs((prev) => [...prev, ""]);
     setErrorMessage(null);
   };
 
@@ -76,7 +86,7 @@ const Upload = () => {
     }));
 
     setUploadedFiles(updatedFiles);
-    setGroupTags(''); // Clear the group tag input after adding
+    setGroupTags('');
   };
 
   const handleRemoveTag = (fileIndex, tagIndex) => {
@@ -99,7 +109,6 @@ const Upload = () => {
         formData.append('photos', fileObj.file);
       });
 
-      // Append customTags as a JSON array to ensure proper parsing on the server
       const tagsArray = uploadedFiles.map(file => file.customTags);
       formData.append('customTags', JSON.stringify(tagsArray));
 
@@ -127,7 +136,7 @@ const Upload = () => {
 
   const handleRemoveFile = (index) => {
     setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
-    setTagInputs(tagInputs.filter((_, i) => i !== index)); // Remove the associated input
+    setTagInputs(tagInputs.filter((_, i) => i !== index));
   };
 
   return (
@@ -147,13 +156,13 @@ const Upload = () => {
             onChange={handleFileChange}
             className="mb-4"
             multiple
+            accept="image/*"
           />
           {errorMessage && <p className="text-red-500 mt-4">{errorMessage}</p>}
         </div>
       </div>
 
       <div className="w-1/2">
-        {/* Group Tag Input */}
         <div className="mb-4 flex">
           <input
             type="text"
@@ -186,7 +195,7 @@ const Upload = () => {
               uploadedFiles.map((file, index) => (
                 <tr key={index} className="border text-center">
                   <td className="py-4">
-                    <img src={file.preview} alt={file.name} className="w-16 h-16 object-cover rounded" /> {/* Image Preview */}
+                    <img src={file.preview} alt={file.name} className="w-16 h-16 object-cover rounded" />
                   </td>
                   <td className="py-4">
                     <p className="font-medium text-lg">{file.name}</p>
