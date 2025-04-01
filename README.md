@@ -109,15 +109,15 @@ cd PhotoOrganizer-WebApp
 
 ## 📜 **License**  
 
-This project is licensed under **[MIT License](LICENSE)**. Please refer to the license file for details on usage and distribution.  
+This project is licensed under **[GNU General Public License v3.0](LICENSE)**. Please refer to the license file for details on usage and distribution.  
 
 ---
 
 ## 📞 **Support & Contact**  
 
 For support, inquiries, or feature requests, reach out via:  
-📧 Email: [your-email@example.com](mailto:your-email@example.com)  
-🐙 GitHub Issues: [Report an Issue](https://github.com/your-repo/issues)  
+📧 Email: [abhisheksinghfulanekar321@gmail.com](mailto:abhisheksinghfulanekar321@gmail.com)  
+🐙 GitHub Issues: [Report an Issue](https://github.com/Ciresta/PhotoOrganizer-WebApp/issues)  
 
 ---
 
