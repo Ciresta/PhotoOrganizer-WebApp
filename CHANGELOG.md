@@ -17,3 +17,4 @@ All notable changes to this project will be documented in this file.
 - Backend: Node.js & Express.js
 - Database: MongoDB
 - Authentication: OAuth 2.0 (Google Login)
+
