@@ -10,7 +10,7 @@ const connectToDatabase = require('./config/db');
 
 const app = express();
 const port = process.env.PORT || 5000;
-
+//cors
 const allowedOrigins = [
   'http://localhost:3000',
   'http://127.0.0.1:5500', // Add any other domains here
