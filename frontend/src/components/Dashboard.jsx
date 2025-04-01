@@ -260,7 +260,7 @@ const Dashboard = () => {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           onKeyPress={handleSearch}
-          placeholder='Search "Food"'
+          placeholder='Search "Trip"'
           className="w-full bg-[#f2f3f8] rounded-full py-2 pl-5 pr-10 focus:outline-none text-gray-500"
         />
         <img src={searchIcon} alt="Search" className="absolute right-4 top-2 w-4 h-4" />
