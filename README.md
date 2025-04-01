@@ -1,7 +1,3 @@
-Here’s a **professional and well-structured README** for your client project, following best GitHub practices:  
-
----
-
 # 📸 **Google Photos Organizer**  
 
 **Google Photos Organizer** is a web-based tool that enhances the organization and accessibility of Google Photos. With seamless integration, it allows users to upload, tag, search, and create interactive slideshows effortlessly.  
@@ -70,36 +66,44 @@ Follow these steps to run the project locally:
 
 1️⃣ **Clone the repository:**  
 ```sh
-git clone https://github.com/your-repo/google-photos-organizer.git
-cd google-photos-organizer
+git clone https://github.com/Ciresta/PhotoOrganizer-WebApp.git
+cd PhotoOrganizer-WebApp
 ```  
 
-2️⃣ **Install dependencies:**  
-```sh
-npm install
-```  
+2️⃣ **Install dependencies for frontend and backend:**  
+   - Navigate to the `frontend` directory and install dependencies:
+   ```sh
+   cd frontend
+   npm install
+   ```
+
+   - Navigate to the `backend` directory and install dependencies:
+   ```sh
+   cd ../backend
+   npm install
+   ```
 
 3️⃣ **Set up environment variables:**  
-Create a `.env` file and add the following:  
-```
-GOOGLE_CLIENT_ID=your-client-id
-GOOGLE_CLIENT_SECRET=your-client-secret
-MONGO_URI=your-mongodb-connection-string
-```  
+   Create a `.env` file in the `backend` folder and add the following:  
+   ```
+   OAUTH_API=your-oauth-api-id
+   OAUTH_SECRET=your-oauth-secret
+   OAUTH_CALLBACK=callback-url
+   MONGO_URI=your-mongodb-connection-string
+   ```
 
-4️⃣ **Run the application:**  
-```sh
-npm start
-```  
+4️⃣ **Run the application locally:**  
+   - Run the backend:
+   ```sh
+   cd backend
+   nodemon start
+   ```
 
----
-
-## 🚀 **Deployment Guide**  
-
-For production deployment, configure the following:  
-✅ Host the frontend on **Vercel/Netlify**  
-✅ Deploy the backend using **Heroku, AWS, or DigitalOcean**  
-✅ Store environment variables securely in **.env files or cloud-based secrets manager**  
+   - In a new terminal, run the frontend:
+   ```sh
+   cd frontend
+   npm start
+   ```
 
 ---
 
@@ -114,3 +118,15 @@ This project is licensed under **[MIT License](LICENSE)**. Please refer to the l
 For support, inquiries, or feature requests, reach out via:  
 📧 Email: [your-email@example.com](mailto:your-email@example.com)  
 🐙 GitHub Issues: [Report an Issue](https://github.com/your-repo/issues)  
+
+---
+
+## 🌐 **Get Started**  
+
+The app is hosted on **[Google Photos Organizer](https://photoorganizer.netlify.app/)**.  
+
+If you'd like to use the application, please fill out the form:  
+[**Sign-up Form**](https://forms.gle/LUPKBcd4STaRrm7k6)
+
+---
+
