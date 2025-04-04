@@ -2,8 +2,6 @@
 
 **Google Photos Organizer** is a web-based tool that enhances the organization and accessibility of Google Photos. With seamless integration, it allows users to upload, tag, search, and create interactive slideshows effortlessly.  
 
----
-
 ## 🚀 **Features**  
 
 🔹 **Upload Photos** – Directly upload images to Google Photos via the application.  
@@ -66,6 +64,24 @@
 ---
 
 ## 🔧 **Installation & Setup**  
+
+
+## 🐳 Docker
+
+### 🔧 Run with Docker
+
+```bash
+docker-compose up --build
+```
+
+- Frontend: [http://localhost:3000](http://localhost:3000)  
+- Backend API: [http://localhost:5000](http://localhost:5000)
+
+To stop:
+
+```bash
+docker-compose down
+```
 
 Follow these steps to run the project locally:  
 
@@ -132,6 +148,3 @@ The app is hosted on **[Google Photos Organizer](https://photoorganizer.netlify.
 
 If you'd like to use the application, please fill out the form:  
 [**Sign-up Form**](https://forms.gle/LUPKBcd4STaRrm7k6)
-
----
-
