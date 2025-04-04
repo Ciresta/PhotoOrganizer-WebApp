@@ -50,6 +50,11 @@
 
 ## 🛠️ **Technology Stack**  
 
+
+[![Node.js](https://img.shields.io/badge/Node.js-20.10.0-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Express](https://img.shields.io/badge/Express-4.21.1-000000?logo=express&logoColor=white)](https://expressjs.com/)
+[![React](https://img.shields.io/badge/React-18.3.1-61DAFB?logo=react&logoColor=white)](https://reactjs.org/)
+
 | Component    | Technology Used       |
 |-------------|----------------------|
 | **Frontend** | React.js, Tailwind CSS |
