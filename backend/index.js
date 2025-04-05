@@ -4,7 +4,7 @@ const bodyParser = require('body-parser');
 const multer = require('multer');
 const cors = require('cors');
 const oauthController = require('./controllers/oauthController');
-const uploadController = require('./controllers/uploadController');
+const uploadController = require('./controllers/photosController');
 const refreshTokenMiddleware = require('./middlewares/refreshTokenMiddleware');
 const connectToDatabase = require('./config/db'); 
 
