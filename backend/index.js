@@ -1,3 +1,5 @@
+require('dotenv').config(); 
+
 const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
@@ -7,6 +9,7 @@ const oauthController = require('./controllers/oauthController');
 const uploadController = require('./controllers/photosController');
 const refreshTokenMiddleware = require('./middlewares/refreshTokenMiddleware');
 const connectToDatabase = require('./config/db'); 
+const { swaggerUi, swaggerSpec } = require('./swagger'); 
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -31,6 +34,8 @@ app.use(cors({
   },
   credentials: true, // Allow credentials (cookies, authentication headers, etc.)
 }));
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use('/public', express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.urlencoded({ extended: true }));
