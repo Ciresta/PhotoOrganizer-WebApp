@@ -93,6 +93,102 @@ const { google } = require('googleapis');
 // };
 
 // ---------------new one with photo id------------------
+/**
+ * @swagger
+ * tags:
+ *   name: Photos
+ *   description: Endpoints for uploading photos and attaching custom metadata
+ */
+
+/**
+ * @swagger
+ * tags:
+ *   name: Custom Tags
+ *   description: Endpoints for add remove custom tags
+ */
+
+
+/**
+ * @swagger
+ * tags:
+ *   name: Slideshow
+ *   description: Endpoints for slideshow operations
+ */
+
+/**
+ * @swagger
+ * tags:
+ *   name: Gallery
+ *   description: Endpoints for gallery operations
+ */
+
+
+/**
+ * @swagger
+ * /add:
+ *   post:
+ *     tags:
+ *       - Photos
+ *     summary: Upload photos to Google Photos with custom tags
+ *     description: Upload photos to Google Photos with associated custom tags. Each photo must have a corresponding tag array.
+ *     operationId: uploadPhotos
+ *     consumes:
+ *       - multipart/form-data
+ *     parameters:
+ *       - name: photos
+ *         in: formData
+ *         description: Photos to be uploaded
+ *         required: true
+ *         type: array
+ *         items:
+ *           type: file
+ *       - name: customTags
+ *         in: formData
+ *         description: An array of custom tags for each photo
+ *         required: false
+ *         type: string
+ *       - name: Authorization
+ *         in: header
+ *         description: OAuth2 Bearer token for authentication
+ *         required: true
+ *         type: string
+ *     responses:
+ *       200:
+ *         description: Photos uploaded successfully and saved to the database
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Photos processed successfully
+ *                 results:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       filename:
+ *                         type: string
+ *                         example: "example.jpg"
+ *                       status:
+ *                         type: string
+ *                         example: "Uploaded and saved successfully"
+ *                       googlePhotoId:
+ *                         type: string
+ *                         example: "A12345"
+ *                       customTags:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         example: ["vacation", "beach"]
+ *       400:
+ *         description: Bad request, e.g., mismatched photos and tags
+ *       401:
+ *         description: Unauthorized, access token is missing or invalid
+ *       500:
+ *         description: Internal server error during the upload or save process
+ */
 
 exports.uploadPhotos = async (req, res, oauth2Client) => {
   const files = req.files;
@@ -205,6 +301,70 @@ exports.uploadPhotos = async (req, res, oauth2Client) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/photos:
+ *   get:
+ *     tags:
+ *       - Photos
+ *     summary: Retrieve all photos
+ *     description: Returns a list of photos from the user's Google Photos account, filtered optionally by date and location.
+ *     parameters:
+ *       - in: query
+ *         name: fromDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         required: false
+ *         description: Start date filter (YYYY-MM-DD)
+ *       - in: query
+ *         name: toDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         required: false
+ *         description: End date filter (YYYY-MM-DD)
+ *       - in: query
+ *         name: location
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Filter photos by location description
+ *       - in: header
+ *         name: Authorization
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: OAuth2 Bearer token for Google Photos API
+ *     responses:
+ *       200:
+ *         description: List of photos
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                     description: The photo's unique ID
+ *                   filename:
+ *                     type: string
+ *                   url:
+ *                     type: string
+ *                   size:
+ *                     type: integer
+ *                   type:
+ *                     type: string
+ *                   creationTime:
+ *                     type: string
+ *                     format: date-time
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 exports.getGooglePhotos = async (req, res, oauth2Client) => {
   const { fromDate, toDate, location } = req.query;
 
@@ -389,7 +549,56 @@ exports.getGooglePhotos = async (req, res, oauth2Client) => {
 //     res.status(500).send('Error fetching photos from Google Photos');
 //   }
 // };
-
+/**
+ * @swagger
+ * /user/profile:
+ *   get:
+ *     tags:
+ *       - Photos
+ *     summary: Retrieve the user's Google profile
+ *     description: Fetches the user's profile information (name, email, birthday, and profile picture) from Google People API using the OAuth2 token.
+ *     operationId: getUserProfile
+ *     parameters:
+ *       - name: Authorization
+ *         in: header
+ *         description: OAuth2 Bearer token for authentication
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved user profile
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 name:
+ *                   type: string
+ *                   example: "John Doe"
+ *                 email:
+ *                   type: string
+ *                   example: "johndoe@example.com"
+ *                 birthday:
+ *                   type: object
+ *                   properties:
+ *                     year:
+ *                       type: integer
+ *                       example: 1990
+ *                     month:
+ *                       type: integer
+ *                       example: 5
+ *                     day:
+ *                       type: integer
+ *                       example: 15
+ *                 profilePic:
+ *                   type: string
+ *                   example: "https://example.com/path/to/profile-pic.jpg"
+ *       401:
+ *         description: Unauthorized, access token is missing or invalid
+ *       500:
+ *         description: Internal server error while fetching user profile
+ */
 exports.getUserProfile = async (req, res, oauth2Client) => {
   if (!oauth2Client.credentials.access_token) {
     return res.status(401).send('Unauthorized: No access token provided');
@@ -508,6 +717,64 @@ exports.getUserProfile = async (req, res, oauth2Client) => {
 //     res.status(500).json({ error: 'Error fetching photos from Google Photos' });
 //   }
 // };
+/**
+ * @swagger
+ * /searchPhotos:
+ *   post:
+ *     tags:
+ *       - Photos
+ *     summary: Search for photos based on a search term
+ *     description: Searches for photos stored in MongoDB and Google Photos using a provided search term, which can match filenames or custom tags.
+ *     operationId: searchPhotos
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               searchTerm:
+ *                 type: string
+ *                 description: The search term to filter photos by, either in the filename or custom tags.
+ *                 example: "vacation"
+ *     responses:
+ *       200:
+ *         description: A list of matched photos from Google Photos and MongoDB
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   url:
+ *                     type: string
+ *                     description: URL of the photo in Google Photos (scaled to 500x500)
+ *                     example: "https://example.com/photo-url=w500-h500"
+ *                   id:
+ *                     type: string
+ *                     description: The unique ID of the photo in Google Photos
+ *                     example: "abc123"
+ *                   filename:
+ *                     type: string
+ *                     description: The filename of the photo
+ *                     example: "vacation_beach.jpg"
+ *                   creationTime:
+ *                     type: string
+ *                     format: date-time
+ *                     description: The creation time of the photo in ISO 8601 format
+ *                     example: "2022-05-20T15:30:00Z"
+ *                   customTags:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *                     description: A list of custom tags associated with the photo
+ *                     example: ["vacation", "beach"]
+ *       401:
+ *         description: Unauthorized, access token is missing or invalid
+ *       500:
+ *         description: Server error while fetching or searching photos
+ */
 
 exports.searchPhotos = async (req, res, oauth2Client) => {
   const { searchTerm } = req.body;
@@ -732,6 +999,78 @@ exports.searchPhotos = async (req, res, oauth2Client) => {
 //     res.status(500).json({ error: 'Error fetching photo details from Google Photos' });
 //   }
 // };
+/**
+ * @swagger
+ * /photos/{photoId}:
+ *   get:
+ *     tags:
+ *       - Photos
+ *     summary: Retrieve photo details along with custom tags
+ *     description: Fetches details of a specific photo from Google Photos using the provided `photoId`, along with associated custom tags stored in MongoDB.
+ *     operationId: getPhotoDetailsWithTags
+ *     parameters:
+ *       - name: photoId
+ *         in: path
+ *         required: true
+ *         description: The unique ID of the photo in Google Photos.
+ *         schema:
+ *           type: string
+ *           example: "abc123"
+ *     responses:
+ *       200:
+ *         description: Photo details and associated custom tags
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 photoDetails:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       description: The unique ID of the photo in Google Photos
+ *                       example: "abc123"
+ *                     url:
+ *                       type: string
+ *                       description: The URL of the photo in Google Photos
+ *                       example: "https://example.com/photo-url"
+ *                     filename:
+ *                       type: string
+ *                       description: The filename of the photo
+ *                       example: "vacation_beach.jpg"
+ *                     description:
+ *                       type: string
+ *                       description: The description of the photo (if any)
+ *                       example: "A beautiful beach during vacation."
+ *                     creationTime:
+ *                       type: string
+ *                       format: date-time
+ *                       description: The creation time of the photo
+ *                       example: "2022-05-20T15:30:00Z"
+ *                     width:
+ *                       type: integer
+ *                       description: The width of the photo
+ *                       example: 1920
+ *                     height:
+ *                       type: integer
+ *                       description: The height of the photo
+ *                       example: 1080
+ *                     mimeType:
+ *                       type: string
+ *                       description: The MIME type of the photo
+ *                       example: "image/jpeg"
+ *                 customTags:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   description: The custom tags associated with the photo
+ *                   example: ["vacation", "beach"]
+ *       401:
+ *         description: Unauthorized, access token is missing or invalid
+ *       500:
+ *         description: Server error while fetching photo details from Google Photos
+ */
 
 exports.getPhotoDetailsWithTags = async (req, res, oauth2Client) => {
   const { photoId } = req.params; // `photoId` is the Google Photos ID
@@ -792,7 +1131,55 @@ exports.getPhotoDetailsWithTags = async (req, res, oauth2Client) => {
     res.status(500).json({ error: 'Error fetching photo details from Google Photos' });
   }
 };
-
+/**
+ * @swagger
+ * /photos/tags:
+ *   post:
+ *     tags:
+ *       - Custom Tags
+ *     summary: Add custom tag to a photo
+ *     description: Adds a custom tag to a specific photo identified by the `googlePhotoId`. This operation will add the tag to the `customTags` array of the corresponding photo in the database.
+ *     operationId: addCustomTags
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               tagName:
+ *                 type: string
+ *                 description: The custom tag to be added to the photo
+ *                 example: "vacation"
+ *               googlePhotoId:
+ *                 type: string
+ *                 description: The unique Google Photos ID of the photo to which the tag will be added
+ *                 example: "abc123"
+ *     responses:
+ *       200:
+ *         description: The photo with the newly added custom tag
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 googlePhotoId:
+ *                   type: string
+ *                   description: The unique Google Photos ID of the photo
+ *                   example: "abc123"
+ *                 customTags:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   description: The array of custom tags associated with the photo
+ *                   example: ["vacation", "beach"]
+ *       400:
+ *         description: Invalid input, missing `tagName` or `googlePhotoId`
+ *       404:
+ *         description: Photo not found in the database
+ *       500:
+ *         description: Server error while adding custom tag
+ */
 exports.addCustomTags = async (req, res, oauth2Client) => {
   const { tagName, googlePhotoId } = req.body;
 
@@ -813,6 +1200,55 @@ exports.addCustomTags = async (req, res, oauth2Client) => {
     res.status(500).json({ message: 'Failed to add custom tag' });
   }
 };
+/**
+ * @swagger
+ * /photos/tags:
+ *   delete:
+ *     tags:
+ *       - Custom Tags
+ *     summary: Remove a custom tag from a photo
+ *     description: Removes a specific custom tag from a photo identified by the `googlePhotoId`. This operation will remove the tag from the `customTags` array of the corresponding photo in the database.
+ *     operationId: deleteCustomTags
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               tagName:
+ *                 type: string
+ *                 description: The custom tag to be removed from the photo
+ *                 example: "vacation"
+ *               googlePhotoId:
+ *                 type: string
+ *                 description: The unique Google Photos ID of the photo from which the tag will be removed
+ *                 example: "abc123"
+ *     responses:
+ *       200:
+ *         description: The photo with the removed custom tag
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 googlePhotoId:
+ *                   type: string
+ *                   description: The unique Google Photos ID of the photo
+ *                   example: "abc123"
+ *                 customTags:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   description: The updated array of custom tags associated with the photo
+ *                   example: ["beach"]
+ *       400:
+ *         description: Invalid input, missing `tagName` or `googlePhotoId`
+ *       404:
+ *         description: Photo not found in the database
+ *       500:
+ *         description: Server error while deleting custom tag
+ */
 
 exports.deleteCustomTags = async (req, res) => {
   const { tagName, googlePhotoId } = req.body;
@@ -834,7 +1270,77 @@ exports.deleteCustomTags = async (req, res) => {
     res.status(500).json({ message: 'Failed to delete custom tag' });
   }
 };
-
+/**
+ * @swagger
+ * /slideshow:
+ *   post:
+ *     tags:
+ *       - Slideshow
+ *     summary: Create a new slideshow
+ *     description: Creates a new slideshow by selecting a list of photo IDs and giving the slideshow a name. The slideshow is then saved and linked to the user's Google account.
+ *     operationId: createSlideshow
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: The name of the slideshow.
+ *                 example: "Summer Vacation"
+ *               photoIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: List of Google Photos media item IDs to be included in the slideshow.
+ *                 example: ["photo1id", "photo2id", "photo3id"]
+ *     responses:
+ *       201:
+ *         description: Slideshow created successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: 'Slideshow created successfully.'
+ *                 slideshow:
+ *                   type: object
+ *                   properties:
+ *                     slideshowId:
+ *                       type: string
+ *                       description: The unique identifier for the slideshow.
+ *                       example: "summer-vacation-12345678"
+ *                     name:
+ *                       type: string
+ *                       description: The name of the slideshow.
+ *                       example: "Summer Vacation"
+ *                     photoIds:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       description: List of photo IDs included in the slideshow.
+ *                       example: ["photo1id", "photo2id", "photo3id"]
+ *                     photoUrls:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       description: List of formatted URLs for each photo in the slideshow.
+ *                       example: ["https://photos.google.com/photo1-url", "https://photos.google.com/photo2-url"]
+ *                     ownerEmail:
+ *                       type: string
+ *                       description: The email address of the user who created the slideshow.
+ *                       example: "user@example.com"
+ *       400:
+ *         description: Invalid input. Missing name or photo IDs, or some photo IDs could not be resolved to URLs.
+ *       401:
+ *         description: Unauthorized. No access token provided.
+ *       500:
+ *         description: Internal server error while creating slideshow.
+ */
 exports.createSlideshow = async (req, res, oauth2Client) => {
   const { name, photoIds } = req.body;
 
@@ -900,8 +1406,54 @@ exports.createSlideshow = async (req, res, oauth2Client) => {
     res.status(500).json({ error: 'Failed to create slideshow.' });
   }
 };
-
-
+/**
+ * @swagger
+ * /slideshow:
+ *   get:
+ *     tags:
+ *       - Slideshow
+ *     summary: Retrieve all slideshows for the authenticated user
+ *     description: Fetches a list of all slideshows created by the authenticated user, including the slideshow ID, name, creation date, and photo URLs.
+ *     operationId: displayAllSlideshows
+ *     responses:
+ *       200:
+ *         description: A list of slideshows for the authenticated user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 slideshows:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       slideshowId:
+ *                         type: string
+ *                         description: The unique identifier of the slideshow
+ *                         example: "summer-vacation-12345678"
+ *                       name:
+ *                         type: string
+ *                         description: The name of the slideshow
+ *                         example: "Summer Vacation"
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         description: The date and time when the slideshow was created
+ *                         example: "2025-04-01T12:00:00Z"
+ *                       photoUrls:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         description: List of URLs of the photos included in the slideshow
+ *                         example: ["https://photos.google.com/photo1-url", "https://photos.google.com/photo2-url"]
+ *       401:
+ *         description: Unauthorized. No valid access token provided.
+ *       404:
+ *         description: No slideshows found for this user.
+ *       500:
+ *         description: Internal server error while fetching slideshows.
+ */
 exports.displayAllSlideshows = async (req, res, oauth2Client) => {
   try {
     // Ensure oauth2Client has valid credentials
@@ -936,7 +1488,129 @@ exports.displayAllSlideshows = async (req, res, oauth2Client) => {
   }
 };
 
+/**
+ * @swagger
+ * /slideshow/{slideshowId}:
+ *   get:
+ *     tags:
+ *       - Slideshow
+ *     summary: Retrieve a slideshow by its ID
+ *     description: Fetches a specific slideshow by its ID, with an option for a minimal response (only photo URLs).
+ *     operationId: displaySlideshowById
+ *     parameters:
+ *       - in: path
+ *         name: slideshowId
+ *         required: true
+ *         description: The unique ID of the slideshow
+ *         schema:
+ *           type: string
+ *         example: "summer-vacation-12345678"
+ *       - in: query
+ *         name: minimal
+ *         required: false
+ *         description: If true, returns only the photo URLs for a minimal response.
+ *         schema:
+ *           type: string
+ *           enum: [true, false]
+ *           default: false
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved the slideshow
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 slideshow:
+ *                   type: object
+ *                   properties:
+ *                     slideshowId:
+ *                       type: string
+ *                       description: The unique identifier of the slideshow
+ *                       example: "summer-vacation-12345678"
+ *                     name:
+ *                       type: string
+ *                       description: The name of the slideshow
+ *                       example: "Summer Vacation"
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       description: The date and time when the slideshow was created
+ *                       example: "2025-04-01T12:00:00Z"
+ *                     photoUrls:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       description: List of URLs of the photos in the slideshow
+ *                       example: ["https://photos.google.com/photo1-url", "https://photos.google.com/photo2-url"]
+ *       400:
+ *         description: Bad request. Slideshow ID is required.
+ *       404:
+ *         description: Slideshow not found.
+ *       500:
+ *         description: Internal server error while fetching slideshow.
+ */
+exports.displaySlideshowById = async (req, res) => {
+  try {
+    const { slideshowId } = req.params;
+    const { minimal } = req.query;
 
+    if (!slideshowId) {
+      return res.status(400).json({ error: 'Slideshow ID is required.' });
+    }
+
+    const slideshow = await Slideshow.findOne({ slideshowId });
+    if (!slideshow) {
+      return res.status(404).json({ error: 'Slideshow not found.' });
+    }
+
+    if (minimal === 'true') {
+      // Return only the photoUrls for minimal response
+      return res.status(200).json({ photoUrls: slideshow.photoUrls });
+    }
+
+    res.status(200).json({
+      slideshow: {
+        slideshowId: slideshow.slideshowId,
+        name: slideshow.name,
+        createdAt: slideshow.createdAt,
+        photoUrls: slideshow.photoUrls,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching slideshow:', error);
+    res.status(500).json({ error: 'Failed to fetch slideshow' });
+  }
+};
+
+
+
+
+/**
+ * @swagger
+ * /slideshow/{id}:
+ *   delete:
+ *     tags:
+ *       - Slideshow
+ *     summary: Delete a slideshow by its ID
+ *     description: Deletes a slideshow from the database using its unique slideshow ID.
+ *     operationId: deleteSlideshow
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: The unique ID of the slideshow to be deleted.
+ *         schema:
+ *           type: string
+ *         example: "summer-vacation-12345678"
+ *     responses:
+ *       200:
+ *         description: Successfully deleted the slideshow.
+ *       404:
+ *         description: Slideshow not found.
+ *       500:
+ *         description: Internal server error while deleting the slideshow.
+ */
 exports.deleteSlideshow = async (req, res) => {
   const { id } = req.params;
   console.log(`Deleting slideshow with ID: ${id}`); // Add this line for debugging
@@ -955,6 +1629,417 @@ exports.deleteSlideshow = async (req, res) => {
     return res.status(500).json({ message: 'Failed to delete slideshow. Please try again.' });
   }
 };
+
+
+
+/**
+ * @swagger
+ * /gallery:
+ *   get:
+ *     tags:
+ *       - Gallery
+ *     summary: Get all gallery images for the authenticated user
+ *     description: Fetches all gallery images stored in the database for the authenticated user, based on their email.
+ *     operationId: getAllGalleryImages
+ *     responses:
+ *       200:
+ *         description: A list of gallery images for the user.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 galleryImages:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         description: Unique ID of the gallery image
+ *                       imageUrl:
+ *                         type: string
+ *                         description: URL of the image
+ *                         example: "https://photos.google.com/media/image123.jpg"
+ *                       title:
+ *                         type: string
+ *                         description: Optional title or description of the image
+ *                         example: "Sunset by the beach"
+ *                       ownerName:
+ *                         type: string
+ *                         description: The email of the user who owns this image
+ *                         example: "user@example.com"
+ *       401:
+ *         description: Unauthorized. No access token provided.
+ *       403:
+ *         description: User information could not be fetched.
+ *       500:
+ *         description: Internal server error while fetching gallery images.
+ */
+
+exports.getAllGalleryImages = async (req, res, oauth2Client) => {
+  try {
+    if (!oauth2Client || !oauth2Client.credentials?.access_token) {
+      return res.status(401).json({ error: 'Unauthorized: No access token provided.' });
+    }
+
+    const oauth2 = google.oauth2({ auth: oauth2Client, version: 'v2' });
+    const userInfo = await oauth2.userinfo.get();
+    const ownerEmail = userInfo.data.email; // Logged-in user's email
+
+    if (!ownerEmail) {
+      return res.status(403).json({ error: 'Unable to fetch user information.' });
+    }
+
+    const galleryImages = await Gallery.find({ ownerName: ownerEmail });
+
+    res.status(200).json({ galleryImages });
+  } catch (error) {
+    console.error('Error fetching gallery images:', error);
+    res.status(500).json({ error: 'Failed to fetch gallery images.' });
+  }
+};
+
+/**
+ * @swagger
+ * /gallery:
+ *   post:
+ *     tags:
+ *       - Gallery
+ *     summary: Add new images to the gallery
+ *     description: Adds one or more photos to the user's gallery with optional title and description. The user's email is extracted from the authenticated session.
+ *     operationId: addGalleryImage
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               photos:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     title:
+ *                       type: string
+ *                       description: Optional title of the photo
+ *                       example: "My Beach Photo"
+ *                     description:
+ *                       type: string
+ *                       description: Optional description of the photo
+ *                       example: "Taken at sunset during vacation"
+ *                     imageUrl:
+ *                       type: string
+ *                       description: URL of the image to add
+ *                       example: "https://photos.google.com/media/photo123.jpg"
+ *     responses:
+ *       201:
+ *         description: Photos added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Photos added successfully.
+ *                 newPhotos:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       title:
+ *                         type: string
+ *                       description:
+ *                         type: string
+ *                       imageUrl:
+ *                         type: string
+ *                       ownerName:
+ *                         type: string
+ *       400:
+ *         description: Bad request. No photos provided or invalid format.
+ *       401:
+ *         description: Unauthorized. No access token provided.
+ *       403:
+ *         description: Unable to fetch user information.
+ *       500:
+ *         description: Internal server error while adding photos.
+ */
+exports.addGalleryImage = async (req, res, oauth2Client) => {
+  const { photos } = req.body;
+
+  if (!photos || !Array.isArray(photos) || photos.length === 0) {
+    return res.status(400).json({ error: 'No photos provided.' });
+  }
+
+  try {
+    // Ensure oauth2Client is provided and valid
+    if (!oauth2Client || !oauth2Client.credentials?.access_token) {
+      return res.status(401).json({ error: 'Unauthorized: No access token provided.' });
+    }
+
+    // Fetch the user's email
+    const oauth2 = google.oauth2({ auth: oauth2Client, version: 'v2' });
+    const userInfo = await oauth2.userinfo.get();
+    const ownerEmail = userInfo.data.email; // Get the authenticated user's email
+
+    if (!ownerEmail) {
+      return res.status(403).json({ error: 'Unable to fetch user information.' });
+    }
+
+    // Map the photos with additional owner information
+    const sanitizedPhotos = photos.map((photo) => ({
+      title: photo.title || 'Untitled', // Default title if not provided
+      description: photo.description || 'No description provided', // Default description
+      imageUrl: photo.imageUrl, // Validate image URL
+      ownerName: ownerEmail, // Attach owner's email
+    }));
+
+    // Save to the database
+    const newPhotos = await Gallery.insertMany(sanitizedPhotos);
+    res.status(201).json({ message: 'Photos added successfully.', newPhotos });
+  } catch (error) {
+    console.error('Error adding photos:', error);
+    res.status(500).json({ error: 'Failed to add photos.' });
+  }
+};
+
+/**
+ * @swagger
+ * /gallery:
+ *   delete:
+ *     tags:
+ *       - Gallery
+ *     summary: Delete an image from the gallery
+ *     description: Deletes a specific image from the user's gallery using the image URL.
+ *     operationId: deleteGalleryImage
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               imageUrl:
+ *                 type: string
+ *                 description: The URL of the image to delete
+ *                 example: "https://photos.google.com/media/photo123.jpg"
+ *     responses:
+ *       200:
+ *         description: Image deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Image deleted successfully
+ *                 deletedImage:
+ *                   type: object
+ *                   properties:
+ *                     title:
+ *                       type: string
+ *                     description:
+ *                       type: string
+ *                     imageUrl:
+ *                       type: string
+ *                     ownerName:
+ *                       type: string
+ *       400:
+ *         description: Bad request. imageUrl not provided.
+ *       404:
+ *         description: Image not found in the database.
+ *       500:
+ *         description: Internal server error while deleting image.
+ */
+exports.deleteGalleryImage = async (req, res) => {
+  const { imageUrl } = req.body;
+
+  // Check if the imageUrl is provided
+  if (!imageUrl) {
+    console.error('No imageUrl provided');
+    return res.status(400).json({ message: 'imageUrl is required' });
+  }
+
+  try {
+    console.log('Attempting to delete image with URL:', imageUrl);
+
+    // Use the correct model
+    const deletedImage = await Gallery.findOneAndDelete({ imageUrl });
+
+    if (!deletedImage) {
+      console.error('Image not found in database:', imageUrl);
+      return res.status(404).json({ message: 'Image not found', imageUrl });
+    }
+
+    console.log('Image deleted successfully:', deletedImage);
+    res.json({ message: 'Image deleted successfully', deletedImage });
+  } catch (error) {
+    console.error('Error deleting image:', error.message);
+    res.status(500).json({ message: 'Failed to delete image', error: error.message });
+  }
+};
+
+/**
+ * @swagger
+ * /gallery/email/{email}:
+ *   get:
+ *     tags:
+ *       - Gallery
+ *     summary: Get gallery images by email
+ *     description: Retrieves a list of image URLs from the gallery for a specific user by their email address.
+ *     operationId: getImagesByEmail
+ *     parameters:
+ *       - in: path
+ *         name: email
+ *         required: true
+ *         description: The email address of the user whose images are to be fetched.
+ *         schema:
+ *           type: string
+ *         example: "user@example.com"
+ *     responses:
+ *       200:
+ *         description: A list of image URLs for the specified email
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 imageUrls:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example: [
+ *                     "https://photos.google.com/media/photo1.jpg",
+ *                     "https://photos.google.com/media/photo2.jpg"
+ *                   ]
+ *       400:
+ *         description: Email is required.
+ *       404:
+ *         description: No images found for the given email.
+ *       500:
+ *         description: Internal server error while fetching images.
+ */
+exports.getImagesByEmail = async (req, res) => {
+  const { email } = req.params; // Extract email from the request params
+
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required.' });
+  }
+
+  try {
+    // Find all images where ownerName matches the provided email
+    const galleryImages = await Gallery.find({ ownerName: email });
+
+    if (!galleryImages || galleryImages.length === 0) {
+      return res.status(404).json({ error: 'No images found for the given email.' });
+    }
+
+    // Map the gallery images to only return the image URLs
+    const imageUrls = galleryImages.map((image) => image.imageUrl);
+
+    res.status(200).json({ imageUrls });
+  } catch (error) {
+    console.error('Error fetching images by email:', error);
+    res.status(500).json({ error: 'Failed to fetch images for the given email.' });
+  }
+};
+
+/**
+ * @swagger
+ * /gallery/photo/{photoId}:
+ *   delete:
+ *     tags:
+ *       - Gallery
+ *     summary: Delete a photo by its Google Photos ID
+ *     description: Deletes a photo from Google Photos (via Google Drive API) and removes its metadata from the database for the authenticated user.
+ *     operationId: deletePhoto
+ *     parameters:
+ *       - in: path
+ *         name: photoId
+ *         required: true
+ *         description: The unique Google Photos ID of the photo to be deleted.
+ *         schema:
+ *           type: string
+ *         example: "AKxyz123456"
+ *     responses:
+ *       200:
+ *         description: Photo deleted successfully from Google Photos and database
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Photo deleted successfully from Google Photos and database
+ *       401:
+ *         description: Unauthorized - no valid access token provided.
+ *       404:
+ *         description: Photo not found in the database for this user.
+ *       500:
+ *         description: Failed to delete photo due to an internal error (Google API or database).
+ */
+exports.deletePhoto = async (req, res, oauth2Client) => {
+  const { photoId } = req.params; // Google Photos ID
+  console.log("PHOTO ID:", photoId);
+
+  if (!oauth2Client.credentials.access_token) {
+    return res.status(401).json({ error: 'Unauthorized: No access token provided' });
+  }
+
+  try {
+    // Step 1: Fetch the authenticated user's email
+    const userInfoUrl = 'https://www.googleapis.com/oauth2/v1/userinfo?alt=json';
+    const userInfoResponse = await axios.get(userInfoUrl, {
+      headers: {
+        Authorization: `Bearer ${oauth2Client.credentials.access_token}`,
+      },
+    });
+    const ownerEmail = userInfoResponse.data.email; // Get authenticated user's email
+    console.log("Owner Email:", ownerEmail);
+
+    // Step 2: Check if the photo exists in MongoDB
+    console.log("Checking if photo exists in MongoDB with googlePhotoId:", photoId, "and ownerEmail:", ownerEmail);
+    const photoRecord = await Photo.findOne({ googlePhotoId: photoId, ownerEmail });
+
+    if (!photoRecord) {
+      return res.status(404).json({ error: 'Photo not found in database' });
+    }
+
+    // Step 3: Delete the photo from Google Photos via Google Drive
+    console.log("Deleting photo from Google Photos...");
+    const drive = google.drive({ version: 'v3', auth: oauth2Client });
+    const deleteResponse = await drive.files.delete({ fileId: photoId });
+
+    if (deleteResponse.status !== 204) {
+      console.error("Failed to delete photo from Google Drive");
+      return res.status(500).json({ error: 'Failed to delete photo from Google Photos' });
+    }
+    console.log("Photo successfully deleted from Google Drive.");
+
+    // Step 4: Remove photo metadata from MongoDB
+    console.log("Removing photo record from MongoDB...");
+    await Photo.deleteOne({ googlePhotoId: photoId, ownerEmail });
+
+    // Step 5: Return success response
+    res.status(200).json({ message: 'Photo deleted successfully from Google Photos and database' });
+  } catch (error) {
+    console.error('Error deleting photo:', error.response ? error.response.data : error.message);
+    res.status(500).json({ error: 'Error deleting photo from Google Photos and database' });
+  }
+};
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1000,155 +2085,3 @@ exports.deleteSlideshow = async (req, res) => {
 //     }
 //   }
 // };
-
-exports.getAllGalleryImages = async (req, res, oauth2Client) => {
-  try {
-    // Ensure oauth2Client is provided and valid
-    if (!oauth2Client || !oauth2Client.credentials?.access_token) {
-      return res.status(401).json({ error: 'Unauthorized: No access token provided.' });
-    }
-
-    // Fetch the logged-in user's email
-    const oauth2 = google.oauth2({ auth: oauth2Client, version: 'v2' });
-    const userInfo = await oauth2.userinfo.get();
-    const ownerEmail = userInfo.data.email; // Logged-in user's email
-
-    if (!ownerEmail) {
-      return res.status(403).json({ error: 'Unable to fetch user information.' });
-    }
-
-    // Find gallery images owned by the logged-in user
-    const galleryImages = await Gallery.find({ ownerName: ownerEmail });
-
-    res.status(200).json({ galleryImages });
-  } catch (error) {
-    console.error('Error fetching gallery images:', error);
-    res.status(500).json({ error: 'Failed to fetch gallery images.' });
-  }
-};
-
-exports.addGalleryImage = async (req, res, oauth2Client) => {
-  const { photos } = req.body;
-
-  if (!photos || !Array.isArray(photos) || photos.length === 0) {
-    return res.status(400).json({ error: 'No photos provided.' });
-  }
-
-  try {
-    // Ensure oauth2Client is provided and valid
-    if (!oauth2Client || !oauth2Client.credentials?.access_token) {
-      return res.status(401).json({ error: 'Unauthorized: No access token provided.' });
-    }
-
-    // Fetch the user's email
-    const oauth2 = google.oauth2({ auth: oauth2Client, version: 'v2' });
-    const userInfo = await oauth2.userinfo.get();
-    const ownerEmail = userInfo.data.email; // Get the authenticated user's email
-
-    if (!ownerEmail) {
-      return res.status(403).json({ error: 'Unable to fetch user information.' });
-    }
-
-    // Map the photos with additional owner information
-    const sanitizedPhotos = photos.map((photo) => ({
-      title: photo.title || 'Untitled', // Default title if not provided
-      description: photo.description || 'No description provided', // Default description
-      imageUrl: photo.imageUrl, // Validate image URL
-      ownerName: ownerEmail, // Attach owner's email
-    }));
-
-    // Save to the database
-    const newPhotos = await Gallery.insertMany(sanitizedPhotos);
-    res.status(201).json({ message: 'Photos added successfully.', newPhotos });
-  } catch (error) {
-    console.error('Error adding photos:', error);
-    res.status(500).json({ error: 'Failed to add photos.' });
-  }
-};
-
-exports.deleteGalleryImage = async (req, res) => {
-  const { imageUrl } = req.body;
-
-  // Check if the imageUrl is provided
-  if (!imageUrl) {
-    console.error('No imageUrl provided');
-    return res.status(400).json({ message: 'imageUrl is required' });
-  }
-
-  try {
-    console.log('Attempting to delete image with URL:', imageUrl);
-
-    // Use the correct model
-    const deletedImage = await Gallery.findOneAndDelete({ imageUrl });
-
-    if (!deletedImage) {
-      console.error('Image not found in database:', imageUrl);
-      return res.status(404).json({ message: 'Image not found', imageUrl });
-    }
-
-    console.log('Image deleted successfully:', deletedImage);
-    res.json({ message: 'Image deleted successfully', deletedImage });
-  } catch (error) {
-    console.error('Error deleting image:', error.message);
-    res.status(500).json({ message: 'Failed to delete image', error: error.message });
-  }
-};
-
-exports.displaySlideshowById = async (req, res) => {
-  try {
-    const { slideshowId } = req.params;
-    const { minimal } = req.query;
-
-    if (!slideshowId) {
-      return res.status(400).json({ error: 'Slideshow ID is required.' });
-    }
-
-    const slideshow = await Slideshow.findOne({ slideshowId });
-    if (!slideshow) {
-      return res.status(404).json({ error: 'Slideshow not found.' });
-    }
-
-    if (minimal === 'true') {
-      // Return only the photoUrls for minimal response
-      return res.status(200).json({ photoUrls: slideshow.photoUrls });
-    }
-
-    res.status(200).json({
-      slideshow: {
-        slideshowId: slideshow.slideshowId,
-        name: slideshow.name,
-        createdAt: slideshow.createdAt,
-        photoUrls: slideshow.photoUrls,
-      },
-    });
-  } catch (error) {
-    console.error('Error fetching slideshow:', error);
-    res.status(500).json({ error: 'Failed to fetch slideshow' });
-  }
-};
-
-
-exports.getImagesByEmail = async (req, res) => {
-  const { email } = req.params; // Extract email from the request params
-
-  if (!email) {
-    return res.status(400).json({ error: 'Email is required.' });
-  }
-
-  try {
-    // Find all images where ownerName matches the provided email
-    const galleryImages = await Gallery.find({ ownerName: email });
-
-    if (!galleryImages || galleryImages.length === 0) {
-      return res.status(404).json({ error: 'No images found for the given email.' });
-    }
-
-    // Map the gallery images to only return the image URLs
-    const imageUrls = galleryImages.map((image) => image.imageUrl);
-
-    res.status(200).json({ imageUrls });
-  } catch (error) {
-    console.error('Error fetching images by email:', error);
-    res.status(500).json({ error: 'Failed to fetch images for the given email.' });
-  }
-};
