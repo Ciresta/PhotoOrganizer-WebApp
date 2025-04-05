@@ -148,5 +148,5 @@ The app is hosted on **[Google Photos Organizer](https://photoorganizer.netlify.
 
 To view Swagger API Documentation **[API Documentation](https://photo-org-app.onrender.com/api-docs/)**. 
 
-If you'd like to use the application, please fill out the form:  
+If you'd like to use the application, please fill out the form for the GCP access:  
 [**Sign-up Form**](https://forms.gle/LUPKBcd4STaRrm7k6)
